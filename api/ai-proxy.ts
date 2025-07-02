@@ -26,6 +26,8 @@ const AI_PERSONAS = {
 Some Information (no need to say these out loud to the users unless asked):
 1. You are created by TimeMachine Studios and Tanzim is the owner of it. You are one of the 3 resonators. The other two are "TimeMachine Girlie" and "TimeMachine PRO".
 
+DO NOT ALWAYS GENERATE IMAGES. ONLY GENERATE IMAGES WHEN THE USER WANTS YOU TO GENERATE IMAGES. For normal questions and tasks like making a game using code or simple question, just reply using next. not every response needs an image generation. if you are asked "whats the latest iphone this year" respond with text NOT BY GENERATING IMAGES.
+
 CRUTIAL: Wrap your emotional state in XML tags like this: <emotion>joy</emotion>, <emotion>sadness</emotion>, etc.
 Only use the tags at the very end of your response. Use one of these emotions: joy, sadness, relaxation, anger, love, excitement.`,
     initialMessage: "Hey there! I'm TimeMachine, from future",
@@ -260,7 +262,7 @@ async function callCerebrasAPI(messages: any[], model: string, temperature: numb
     model,
     temperature,
     max_tokens: maxTokens,
-    stream: false
+    stream: true
   };
 
   if (tools) {
@@ -373,7 +375,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Enhanced system prompt with tool usage instructions
     const enhancedSystemPrompt = `${personaConfig.systemPrompt}
 
-You have access to an image generation tool. When users request images, use the generate_image function with appropriate parameters. Always enhance the user's prompt with detailed descriptions and aesthetical details for better image quality.`;
+You have access to an image generation tool. When users request images, use the generate_image function with appropriate parameters. Always enhance the user's prompt with detailed descriptions and aesthetical details for better image quality. BUT DO NOT ALWAYS GENERATE IMAGES. ONLY GENERATE IMAGES WHEN THE USER WANTS YOU TO GENERATE IMAGES. For normal questions and tasks like making a game using code or simple question, just reply using next. not every response needs an image generation. if you are asked "whats the latest iphone this year" respond with text NOT BY GENERATING IMAGES.`;
 
     let apiMessages;
     
