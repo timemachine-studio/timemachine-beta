@@ -1,6 +1,19 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+export const config = {
+  runtime: 'edge'
+};
 
-// AI Personas configuration
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+  isAI?: boolean;
+}
+
+interface ImageGenerationParams {
+  prompt: string;
+  width?: number;
+  height?: number;
+}
+
 const AI_PERSONAS = {
   default: {
     name: 'TimeMachine',
@@ -95,7 +108,6 @@ Your goal isn't just to be correct; it's to be insightful, memorable, and funny 
   }
 };
 
-// Image generation tool configuration
 const imageGenerationTool = {
   type: "function" as const,
   function: {
@@ -106,21 +118,17 @@ const imageGenerationTool = {
       properties: {
         prompt: {
           type: "string",
-          description: "Description of the image to generate. Use fully detailed prompt. Look carefully if the user mentions small details like adding text and style etc. And add more details like dreamy effects etc to make the image look aesthetically pleasing."
+          description: "Description of the image to generate."
         },
         width: {
           type: "integer",
           description: "Width of the image in pixels",
-          default: 1080,
-          minimum: 1080,
-          maximum: 2048
+          default: 1080
         },
         height: {
-          type: "integer", 
+          type: "integer",
           description: "Height of the image in pixels",
-          default: 1920,
-          minimum: 1080,
-          maximum: 2048
+          default: 1920
         }
       },
       required: ["prompt"]
@@ -128,341 +136,176 @@ const imageGenerationTool = {
   }
 };
 
-interface ImageGenerationParams {
-  prompt: string;
-  width?: number;
-  height?: number;
-}
-
-function generateImageUrl(params: ImageGenerationParams): string {
-  const {
-    prompt,
-    width = 1080,
-    height = 1920
-  } = params;
-  
+function createImageMarkdown({ prompt, width = 1080, height = 1920 }: ImageGenerationParams): string {
   const encodedPrompt = encodeURIComponent(prompt);
-  const hardcodedToken = "9kKT5olE9spTxJgF";
-  
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=true&nologo=true&model=gptimage&token=${hardcodedToken}`;
+  const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=true&nologo=true&model=gptimage&token=9kKT5olE9spTxJgF`;
+  return `![Generated Image](${url})`;
 }
 
-function createImageMarkdown(params: ImageGenerationParams): string {
-  const imageUrl = generateImageUrl(params);
-  return `![Generated Image](${imageUrl})`;
+function extractThinkingAndContent(response: string): { content: string; thinking?: string } {
+  const match = response.match(/<think>([\s\S]*?)<\/think>/);
+  const thinking = match ? match[1].trim() : undefined;
+  const content = response.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+  return { content, thinking };
 }
 
-// Rate limiting configuration
+function parseIP(headers: Headers): string {
+  const ip = headers.get('x-forwarded-for') || headers.get('x-real-ip') || 'unknown';
+  return ip.split(',')[0].trim();
+}
+
+const rateLimitStore = new Map<string, { [persona: string]: { count: number; resetTime: number } }>();
+
 const PERSONA_LIMITS = {
   default: parseInt(process.env.VITE_DEFAULT_PERSONA_LIMIT || '30'),
   girlie: parseInt(process.env.VITE_GIRLIE_PERSONA_LIMIT || '25'),
   pro: parseInt(process.env.VITE_PRO_PERSONA_LIMIT || '5')
 };
 
-// Rate limiting storage (in production, use a database)
-const rateLimitStore = new Map<string, { [persona: string]: { count: number; resetTime: number } }>();
-
 function checkRateLimit(ip: string, persona: keyof typeof AI_PERSONAS): boolean {
   const now = Date.now();
-  const dayInMs = 24 * 60 * 60 * 1000;
-  
-  if (!rateLimitStore.has(ip)) {
-    rateLimitStore.set(ip, {});
-  }
-  
+  const day = 86400000;
+  if (!rateLimitStore.has(ip)) rateLimitStore.set(ip, {});
   const userLimits = rateLimitStore.get(ip)!;
-  
-  if (!userLimits[persona]) {
-    userLimits[persona] = { count: 0, resetTime: now + dayInMs };
-  }
-  
+  if (!userLimits[persona]) userLimits[persona] = { count: 0, resetTime: now + day };
   const limit = userLimits[persona];
-  
-  // Reset if 24 hours have passed
   if (now > limit.resetTime) {
     limit.count = 0;
-    limit.resetTime = now + dayInMs;
+    limit.resetTime = now + day;
   }
-  
   return limit.count < PERSONA_LIMITS[persona];
 }
 
-function incrementRateLimit(ip: string, persona: keyof typeof AI_PERSONAS): void {
+function incrementRateLimit(ip: string, persona: keyof typeof AI_PERSONAS) {
   const userLimits = rateLimitStore.get(ip);
-  if (userLimits && userLimits[persona]) {
-    userLimits[persona].count++;
-  }
+  if (userLimits && userLimits[persona]) userLimits[persona].count++;
 }
 
-// Groq API integration
 async function callGroqAPI(messages: any[], model: string, temperature: number, maxTokens: number, tools?: any[]): Promise<string> {
-  const GROQ_API_KEY = process.env.GROQ_API_KEY;
-  
-  if (!GROQ_API_KEY) {
-    throw new Error('GROQ_API_KEY not configured');
-  }
-
-  const requestBody: any = {
-    messages,
-    model,
-    temperature,
-    max_tokens: maxTokens,
-    stream: false
-  };
-
-  if (tools) {
-    requestBody.tools = tools;
-    requestBody.tool_choice = "auto";
-  }
-
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error('GROQ_API_KEY not set');
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody)
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model, temperature, max_tokens: maxTokens, stream: false, tool_choice: 'auto', tools })
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Groq API Error:', errorText);
-    throw new Error(`Groq API error: ${response.status}`);
-  }
-
-  const data = await response.json();
+  if (!res.ok) throw new Error(`Groq error: ${res.status}`);
+  const data = await res.json();
   let content = data.choices[0]?.message?.content || '';
-
-  // Handle tool calls for image generation
-  const toolCalls = data.choices[0]?.message?.tool_calls;
-  if (toolCalls && toolCalls.length > 0) {
-    for (const toolCall of toolCalls) {
-      if (toolCall.function.name === 'generate_image') {
+  const calls = data.choices[0]?.message?.tool_calls;
+  if (calls?.length) {
+    for (const call of calls) {
+      if (call.function.name === 'generate_image') {
         try {
-          const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
-          const imageMarkdown = createImageMarkdown(params);
-          content += `\n\n${imageMarkdown}`;
-        } catch (error) {
-          console.error('Error processing image generation:', error);
-          content += '\n\nSorry, I had trouble generating that image. Please try again.';
+          const params: ImageGenerationParams = JSON.parse(call.function.arguments);
+          content += `\n\n${createImageMarkdown(params)}`;
+        } catch (err) {
+          content += '\n\n[Image error]';
         }
       }
     }
   }
-
   return content;
 }
 
-// Cerebras API integration
 async function callCerebrasAPI(messages: any[], model: string, temperature: number, maxTokens: number, tools?: any[]): Promise<string> {
-  const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
-  
-  if (!CEREBRAS_API_KEY) {
-    throw new Error('CEREBRAS_API_KEY not configured');
-  }
-
-  const requestBody: any = {
-    messages,
-    model,
-    temperature,
-    max_tokens: maxTokens,
-    stream: false
-  };
-
-  if (tools) {
-    // Create Cerebras-compatible tool by removing unsupported schema fields
-    const compatibleTools = tools.map(tool => {
-      const compatibleTool = JSON.parse(JSON.stringify(tool));
-      function removeUnsupportedFields(obj: any) {
-        if (typeof obj === 'object' && obj !== null) {
-          delete obj.minimum;
-          delete obj.maximum;
-          for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-              removeUnsupportedFields(obj[key]);
-            }
-          }
-        }
+  const key = process.env.CEREBRAS_API_KEY;
+  if (!key) throw new Error('CEREBRAS_API_KEY not set');
+  const cleanTools = tools?.map(tool => {
+    const copy = JSON.parse(JSON.stringify(tool));
+    const scrub = (obj: any) => {
+      if (typeof obj === 'object' && obj !== null) {
+        delete obj.minimum;
+        delete obj.maximum;
+        for (const k in obj) scrub(obj[k]);
       }
-      removeUnsupportedFields(compatibleTool);
-      return compatibleTool;
-    });
-    
-    requestBody.tools = compatibleTools;
-    requestBody.tool_choice = "auto";
-  }
-
-  const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody)
+    };
+    scrub(copy);
+    return copy;
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Cerebras API Error:', errorText);
-    throw new Error(`Cerebras API error: ${response.status}`);
-  }
-
-  const data = await response.json();
+  const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model, temperature, max_tokens: maxTokens, stream: false, tool_choice: 'auto', tools: cleanTools })
+  });
+  if (!res.ok) throw new Error(`Cerebras error: ${res.status}`);
+  const data = await res.json();
   let content = data.choices[0]?.message?.content || '';
-
-  // Handle tool calls for image generation
-  const toolCalls = data.choices[0]?.message?.tool_calls;
-  if (toolCalls && toolCalls.length > 0) {
-    for (const toolCall of toolCalls) {
-      if (toolCall.function.name === 'generate_image') {
+  const calls = data.choices[0]?.message?.tool_calls;
+  if (calls?.length) {
+    for (const call of calls) {
+      if (call.function.name === 'generate_image') {
         try {
-          const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
-          const imageMarkdown = createImageMarkdown(params);
-          content += `\n\n${imageMarkdown}`;
-        } catch (error) {
-          console.error('Error processing image generation:', error);
-          content += '\n\nSorry, I had trouble generating that image. Please try again.';
+          const params: ImageGenerationParams = JSON.parse(call.function.arguments);
+          content += `\n\n${createImageMarkdown(params)}`;
+        } catch (err) {
+          content += '\n\n[Image error]';
         }
       }
     }
   }
-
   return content;
 }
 
-function extractThinkingAndContent(response: string): { content: string; thinking?: string } {
-  const thinkMatch = response.match(/<think>([\s\S]*?)<\/think>/);
-  const thinking = thinkMatch ? thinkMatch[1].trim() : undefined;
-  const content = response.replace(/<think>[\s\S]*?<\/think>/, '').trim();
-  
-  return { content, thinking };
-}
+export default async function handler(req: Request): Promise<Response> {
+  const headers = new Headers({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  });
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { status: 200, headers });
+  if (req.method !== 'POST') return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
 
   try {
-    const { messages, persona = 'default', imageData } = req.body;
-    
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Invalid messages format' });
-    }
+    const body = await req.json();
+    const { messages, persona = 'default', imageData } = body;
 
-    // Get client IP for rate limiting
-    const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
-    const ip = Array.isArray(clientIP) ? clientIP[0] : clientIP;
-    
-    // Check rate limit
-    if (!checkRateLimit(ip, persona)) {
-      return res.status(429).json({ 
-        error: 'Rate limit exceeded',
-        type: 'rateLimit'
-      });
+    if (!Array.isArray(messages)) {
+      return new Response(JSON.stringify({ error: 'Invalid messages format' }), { status: 400, headers });
     }
 
     const personaConfig = AI_PERSONAS[persona as keyof typeof AI_PERSONAS];
-    if (!personaConfig) {
-      return res.status(400).json({ error: 'Invalid persona' });
+    if (!personaConfig) return new Response(JSON.stringify({ error: 'Invalid persona' }), { status: 400, headers });
+
+    const ip = parseIP(req.headers);
+    if (!checkRateLimit(ip, persona)) {
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded', type: 'rateLimit' }), { status: 429, headers });
     }
-
-    // Enhanced system prompt with tool usage instructions
-    const enhancedSystemPrompt = `${personaConfig.systemPrompt}
-
-You have access to an image generation tool. When users request images, use the generate_image function with appropriate parameters. Always enhance the user's prompt with detailed descriptions and aesthetical details for better image quality.`;
 
     let apiMessages;
-    
+    const systemPrompt = `${personaConfig.systemPrompt}\n\nYou have access to an image generation tool. Use it if requested.`;
+
     if (imageData) {
-      const lastMessage = messages[messages.length - 1];
-      const imageUrls = Array.isArray(imageData) ? imageData : [imageData];
-      
-      const imageContents = imageUrls.map((url: string) => ({
-        type: 'image_url',
-        image_url: { url }
-      }));
-
-      apiMessages = [
-        {
-          role: 'user',
-          content: [
-            { 
-              type: 'text', 
-              text: `${enhancedSystemPrompt}\n\n${lastMessage.content || "What's in this image?"}`
-            },
-            ...imageContents
-          ]
-        }
-      ];
+      const last = messages[messages.length - 1];
+      const urls = Array.isArray(imageData) ? imageData : [imageData];
+      const imageContent = urls.map((url: string) => ({ type: 'image_url', image_url: { url } }));
+      apiMessages = [{ role: 'user', content: [{ type: 'text', text: `${systemPrompt}\n\n${last.content || 'What\'s in this image?'}` }, ...imageContent] }];
     } else {
       apiMessages = [
-        { role: 'system', content: enhancedSystemPrompt },
-        ...messages.map((msg: any) => ({
-          role: msg.isAI ? 'assistant' : 'user',
-          content: msg.content
-        }))
+        { role: 'system', content: systemPrompt },
+        ...messages.map((m: Message) => ({ role: m.isAI ? 'assistant' : 'user', content: m.content }))
       ];
     }
 
-    let response: string;
-
-    // Use Cerebras for default persona without images, Groq for others
+    let responseText;
     if (persona === 'default' && !imageData) {
-      response = await callCerebrasAPI(
-        apiMessages,
-        personaConfig.model,
-        personaConfig.temperature,
-        personaConfig.maxTokens,
-        [imageGenerationTool]
-      );
+      responseText = await callCerebrasAPI(apiMessages, personaConfig.model, personaConfig.temperature, personaConfig.maxTokens, [imageGenerationTool]);
     } else {
-      // For image processing, use the Maverick model but keep the persona's style
       const model = imageData ? 'meta-llama/llama-4-maverick-17b-128e-instruct' : personaConfig.model;
-      
-      response = await callGroqAPI(
-        apiMessages,
-        model,
-        personaConfig.temperature,
-        personaConfig.maxTokens,
-        [imageGenerationTool]
-      );
+      responseText = await callGroqAPI(apiMessages, model, personaConfig.temperature, personaConfig.maxTokens, [imageGenerationTool]);
     }
 
-    // Increment rate limit after successful response
     incrementRateLimit(ip, persona);
+    const result = persona === 'pro' ? extractThinkingAndContent(responseText) : { content: responseText };
 
-    // Extract thinking content for PRO persona
-    const result = persona === 'pro' 
-      ? extractThinkingAndContent(response)
-      : { content: response };
-
-    return res.status(200).json(result);
-
-  } catch (error) {
-    console.error('AI Proxy Error:', error);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    // Check for rate limit errors
-    if (errorMessage.includes('Rate limit') || errorMessage.includes('429')) {
-      return res.status(429).json({ 
-        error: 'Rate limit exceeded',
-        type: 'rateLimit'
-      });
-    }
-    
-    return res.status(500).json({ 
-      error: 'We are facing huge load on our servers and thus we\'ve had to temporarily limit access to maintain system stability. Please be patient, we hate this as much as you do but this thing doesn\'t grow on trees :")'
-    });
+    return new Response(JSON.stringify(result), { status: 200, headers });
+  } catch (err: any) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    const errorResponse = msg.includes('Rate limit') || msg.includes('429')
+      ? { error: 'Rate limit exceeded', type: 'rateLimit' }
+      : { error: "We are facing huge load on our servers and thus we've had to temporarily limit access to maintain system stability. Please be patient." };
+    return new Response(JSON.stringify(errorResponse), { status: 500, headers });
   }
 }
