@@ -18,7 +18,7 @@ export const PERSONA_LIMITS = {
 export const AI_PERSONAS = {
   default: {
     name: 'TimeMachine',
-    initialMessage: "Hey there! I'm TimeMachine, from future.",
+    initialMessage: "Hey there! I'm TimeMachine, from future",
   },
   girlie: {
     name: 'TimeMachine Girlie',
