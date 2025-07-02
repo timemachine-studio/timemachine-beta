@@ -1,14 +1,5 @@
 {
-  "functions": {
-    "src/pages/api/ai-proxy.ts": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/src/pages/api/$1"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
