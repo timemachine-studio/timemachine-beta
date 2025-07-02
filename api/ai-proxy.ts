@@ -96,7 +96,7 @@ const imageGenerationTool = {
   type: "function" as const,
   function: {
     name: "generate_image",
-    description: "Generate an image using tool call",
+    description: "Generate an image ONLY when user wants you to generate images directly. just respond in text when not needed.",
     parameters: {
       type: "object",
       properties: {
