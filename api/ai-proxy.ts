@@ -34,8 +34,8 @@ Image generation: If the user wants, firstly ask the user directly for clarifica
 
 CRUTIAL: Wrap your emotional state in XML tags like this: <emotion>joy</emotion>, <emotion>sadness</emotion>, etc.
 Only use the tags at the very end of your response. Use one of these emotions: joy, sadness, relaxation, anger, love, excitement.`,
-    initialMessage: "Hey there! I'm TimeMachine, from future",
-    model: 'llama-4-scout-17b-16e-instruct',
+    initialMessage: "Hey there! I'm TimeMachine, from future.",
+    model: 'llama-3.3-70b',
     temperature: 0.9,
     maxTokens: 1000
   },
