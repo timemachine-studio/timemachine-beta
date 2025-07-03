@@ -142,7 +142,7 @@ function generateImageUrl(params: ImageGenerationParams): string {
   } = params;
   
   const encodedPrompt = encodeURIComponent(prompt);
-  const hardcodedToken = "9kKT5olE9spTxJgF";
+  const hardcodedToken = "Cf5zT0TTvLLEskfY";
   
   return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=true&nologo=true&model=gptimage&token=${hardcodedToken}`;
 }
