@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { ChatInput } from './components/chat/ChatInput';
 import { BrandLogo } from './components/brand/BrandLogo';
-import { LoadingContainer } from './components/loading/LoadingContainer';
 import { MusicPlayer } from './components/music/MusicPlayer';
 import { Star } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -150,8 +149,6 @@ function AppContent() {
             </div>
           </div>
         </header>
-
-        <LoadingContainer isVisible={isLoading} />
         
         <MusicPlayer 
           currentPersona={currentPersona}
