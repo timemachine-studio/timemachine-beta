@@ -9,6 +9,7 @@ import { Brain } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { GeneratedImage } from './GeneratedImage';
 import { AnimatedShinyText } from '../ui/AnimatedShinyText';
+import { TypingDots } from './TypingDots';
 
 interface AIMessageProps extends MessageProps {
   isChatMode: boolean;
@@ -228,6 +229,20 @@ export function AIMessage({
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
+      )}
+
+      {/* Show typing dots when streaming starts but no content yet */}
+      {isStreaming && !displayContent && !isGeneratingImage && !isWritingImageLink && (
+        <div className={`${isChatMode ? 'flex flex-col gap-1' : 'w-full max-w-4xl mx-auto text-center'}`}>
+          {isChatMode && (
+            <div className={`text-xs font-medium ${personaColor} opacity-60`}>
+              {AI_PERSONAS[displayPersona].name}
+            </div>
+          )}
+          <div className={`${isChatMode ? 'max-w-[85%]' : ''}`}>
+            <TypingDots />
+          </div>
         </div>
       )}
 
