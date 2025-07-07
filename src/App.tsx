@@ -20,7 +20,6 @@ function AppContent() {
     isLoading, 
     currentPersona,
     currentEmotion,
-    streamingMessageId,
     error,
     showAboutUs,
     showRateLimitModal,
@@ -161,7 +160,6 @@ function AppContent() {
             <ChatMode
               messages={messages}
               currentPersona={currentPersona}
-              streamingMessageId={streamingMessageId}
               onMessageAnimated={markMessageAsAnimated}
               error={error}
             />
@@ -169,7 +167,6 @@ function AppContent() {
             <StageMode
               messages={messages}
               currentPersona={currentPersona}
-              streamingMessageId={streamingMessageId}
               onMessageAnimated={markMessageAsAnimated}
             />
           )}
