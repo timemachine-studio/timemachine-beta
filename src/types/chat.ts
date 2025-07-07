@@ -7,6 +7,7 @@ export interface Message {
   hasAnimated?: boolean;
   thinking?: string;
   imageData?: string | string[]; // Add imageData field
+  streamingDelta?: string; // Add streamingDelta for efficient streaming
 }
 
 export interface ChatState {
@@ -38,4 +39,5 @@ export interface MessageProps {
   onAnimationComplete?: () => void;
   thinking?: string;
   imageData?: string | string[];
+  streamingDelta?: string; // Add streamingDelta prop
 }
