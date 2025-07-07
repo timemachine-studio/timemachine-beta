@@ -23,7 +23,8 @@ export function ChatMessage({
   currentPersona,
   isStreaming,
   previousMessage,
-  imageData
+  imageData,
+  streamingDelta
 }: ChatMessageProps) {
   if (isAI) {
     return (
@@ -37,6 +38,7 @@ export function ChatMessage({
         currentPersona={currentPersona}
         isStreaming={isStreaming}
         previousMessage={previousMessage}
+        streamingDelta={streamingDelta}
       />
     );
   }
