@@ -57,7 +57,8 @@ export function AIMessage({
   onAnimationComplete, 
   currentPersona = 'default',
   isStreaming = false,
-  previousMessage = null
+  previousMessage = null,
+  streamingDelta
 }: AIMessageProps) {
   const [showThinking, setShowThinking] = useState(false);
   const [displayContent, setDisplayContent] = useState('');
@@ -68,6 +69,7 @@ export function AIMessage({
   const personaColor = getPersonaColor(displayPersona);
   const shimmerColors = getPersonaShimmerColors(displayPersona);
   const contentEndRef = useRef<HTMLDivElement>(null);
+  const streamingContentRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -82,46 +84,66 @@ export function AIMessage({
     }
   }, [content, thinking, isStreaming]);
 
-  // Handle image generation detection and hiding
+  // Handle streaming delta updates for efficient rendering
   useEffect(() => {
-    // Check if we're in the middle of writing an image link
-    if (content.includes('![Image](https://image.pollinations.ai/') && !content.includes('?width=')) {
-      setIsWritingImageLink(true);
-      setIsGeneratingImage(false);
-      setDisplayContent('');
-      return;
-    }
-
-    // Check if we have a complete image link
-    if (content.includes('![Image](https://image.pollinations.ai/')) {
-      const imageRegex = /!\[Image\]\(https:\/\/image\.pollinations\.ai\/prompt\/[^)]+\)/g;
-      const matches = content.match(imageRegex);
+    if (isStreaming && streamingDelta && streamingContentRef.current) {
+      // Directly append new text to the streaming content div
+      streamingContentRef.current.textContent += streamingDelta;
       
-      if (matches) {
-        // Complete image markdown found, show generating state briefly then show content
-        setIsWritingImageLink(false);
-        setIsGeneratingImage(true);
-        setTimeout(() => {
-          setIsGeneratingImage(false);
+      // Scroll to bottom
+      if (contentEndRef.current) {
+        contentEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [streamingDelta, isStreaming]);
+
+  // Handle final content rendering when streaming ends
+  useEffect(() => {
+    if (!isStreaming) {
+      // Clear streaming content and set final display content
+      if (streamingContentRef.current) {
+        streamingContentRef.current.textContent = '';
+      }
+      
+      // Handle image generation detection and hiding
+      if (content.includes('![Image](https://image.pollinations.ai/') && !content.includes('?width=')) {
+        setIsWritingImageLink(true);
+        setIsGeneratingImage(false);
+        setDisplayContent('');
+        return;
+      }
+
+      // Check if we have a complete image link
+      if (content.includes('![Image](https://image.pollinations.ai/')) {
+        const imageRegex = /!\[Image\]\(https:\/\/image\.pollinations\.ai\/prompt\/[^)]+\)/g;
+        const matches = content.match(imageRegex);
+        
+        if (matches) {
+          // Complete image markdown found, show generating state briefly then show content
+          setIsWritingImageLink(false);
+          setIsGeneratingImage(true);
+          setTimeout(() => {
+            setIsGeneratingImage(false);
+            setDisplayContent(content);
+          }, 1500);
+        } else if (content.includes('![Image](https://image.pollinations.ai/')) {
+          // Incomplete image markdown, hide it
+          const beforeImage = content.split('![Image](https://image.pollinations.ai/')[0];
+          setDisplayContent(beforeImage);
+          setIsGeneratingImage(true);
+          setIsWritingImageLink(false);
+        } else {
           setDisplayContent(content);
-        }, 1500);
-      } else if (content.includes('![Image](https://image.pollinations.ai/')) {
-        // Incomplete image markdown, hide it
-        const beforeImage = content.split('![Image](https://image.pollinations.ai/')[0];
-        setDisplayContent(beforeImage);
-        setIsGeneratingImage(true);
-        setIsWritingImageLink(false);
+          setIsGeneratingImage(false);
+          setIsWritingImageLink(false);
+        }
       } else {
         setDisplayContent(content);
         setIsGeneratingImage(false);
         setIsWritingImageLink(false);
       }
-    } else {
-      setDisplayContent(content);
-      setIsGeneratingImage(false);
-      setIsWritingImageLink(false);
     }
-  }, [content]);
+  }, [content, isStreaming]);
 
   const MarkdownComponents = {
     h1: ({ children }: { children: React.ReactNode }) => (
@@ -233,7 +255,7 @@ export function AIMessage({
       )}
 
       {/* Show typing dots when streaming starts but no content yet */}
-      {isStreaming && !displayContent && !isGeneratingImage && !isWritingImageLink && (
+      {isStreaming && !content && !streamingDelta && !isGeneratingImage && !isWritingImageLink && (
         <div className={`${isChatMode ? 'flex flex-col gap-1' : 'w-full max-w-4xl mx-auto text-center'}`}>
           {isChatMode && (
             <div className={`text-xs font-medium ${personaColor} opacity-60`}>
@@ -288,8 +310,42 @@ export function AIMessage({
         </div>
       )}
 
-      {/* Show content only when not generating or when generation is complete */}
-      {!isGeneratingImage && !isWritingImageLink && displayContent && (
+      {/* Streaming content - direct text rendering for performance */}
+      {isStreaming && !isGeneratingImage && !isWritingImageLink && (
+        <>
+          {isChatMode ? (
+            <div className="flex flex-col gap-1">
+              <div className={`text-xs font-medium ${personaColor} opacity-60`}>
+                {AI_PERSONAS[displayPersona].name}
+              </div>
+              <div className={`${theme.text} text-base leading-relaxed max-w-[85%]`}>
+                <div 
+                  ref={streamingContentRef}
+                  className="whitespace-pre-wrap"
+                  style={{ 
+                    fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif',
+                    lineHeight: '1.6'
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className={`${theme.text} text-xl sm:text-2xl md:text-3xl w-full max-w-4xl mx-auto text-center`}>
+              <div 
+                ref={streamingContentRef}
+                className="whitespace-pre-wrap"
+                style={{ 
+                  fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif',
+                  lineHeight: '1.3'
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Final rendered content with markdown - only when not streaming */}
+      {!isStreaming && !isGeneratingImage && !isWritingImageLink && displayContent && (
         <>
           {isChatMode ? (
             <div className="flex flex-col gap-1">
@@ -307,11 +363,7 @@ export function AIMessage({
               </div>
             </div>
           ) : (
-            <div className={`${theme.text} ${
-              isChatMode 
-                ? 'text-base sm:text-lg' 
-                : 'text-xl sm:text-2xl md:text-3xl'
-            } w-full max-w-4xl mx-auto text-center`}>
+            <div className={`${theme.text} text-xl sm:text-2xl md:text-3xl w-full max-w-4xl mx-auto text-center`}>
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 components={MarkdownComponents}
