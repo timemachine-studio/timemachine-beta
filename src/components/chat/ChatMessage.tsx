@@ -8,7 +8,6 @@ interface ChatMessageProps extends Message {
   isChatMode: boolean;
   onAnimationComplete: (messageId: number) => void;
   currentPersona: keyof typeof AI_PERSONAS;
-  isStreaming?: boolean;
   previousMessage?: string | null;
 }
 
@@ -21,10 +20,8 @@ export function ChatMessage({
   hasAnimated, 
   onAnimationComplete, 
   currentPersona,
-  isStreaming,
   previousMessage,
-  imageData,
-  streamingDelta
+  imageData
 }: ChatMessageProps) {
   if (isAI) {
     return (
@@ -36,9 +33,7 @@ export function ChatMessage({
         hasAnimated={hasAnimated}
         onAnimationComplete={onAnimationComplete}
         currentPersona={currentPersona}
-        isStreaming={isStreaming}
         previousMessage={previousMessage}
-        streamingDelta={streamingDelta}
       />
     );
   }
