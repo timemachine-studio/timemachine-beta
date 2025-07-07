@@ -24,6 +24,9 @@ export function useChat() {
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
 
+  // Ref to track last streamed content for delta calculation
+  const lastStreamedContentRef = useRef<string>('');
+
   // Set theme based on persona
   const setPersonaTheme = useCallback((persona: keyof typeof AI_PERSONAS) => {
     let themeToSet: string;
@@ -195,12 +198,17 @@ export function useChat() {
     try {
       const streamingId = Date.now() + 1;
       setStreamingMessageId(streamingId);
+      
+      // Reset the last streamed content for this new response
+      lastStreamedContentRef.current = '';
+      
       setMessages(prev => [...prev, {
         id: streamingId,
         content: '',
         thinking: messagePersona === 'pro' ? '' : undefined,
         isAI: true,
-        hasAnimated: false
+        hasAnimated: false,
+        streamingDelta: ''
       }]);
 
       const aiResponse = await generateAIResponse(
@@ -210,12 +218,18 @@ export function useChat() {
         messagePersona,
         (data) => {
           const cleanedContent = cleanContent(data.content);
+          
+          // Calculate delta content for efficient streaming
+          const deltaContent = cleanedContent.slice(lastStreamedContentRef.current.length);
+          lastStreamedContentRef.current = cleanedContent;
+          
           setMessages(prev => prev.map(msg => 
             msg.id === streamingId
               ? { 
                   ...msg, 
                   content: cleanedContent,
-                  thinking: data.thinking !== undefined ? data.thinking : msg.thinking
+                  thinking: data.thinking !== undefined ? data.thinking : msg.thinking,
+                  streamingDelta: deltaContent
                 }
               : msg
           ));
@@ -229,9 +243,15 @@ export function useChat() {
         setCurrentEmotion(emotion);
       }
 
+      // Final update without streaming delta
       setMessages(prev => prev.map(msg =>
         msg.id === streamingId
-          ? { ...msg, content: cleanedContent, thinking: aiResponse.thinking }
+          ? { 
+              ...msg, 
+              content: cleanedContent, 
+              thinking: aiResponse.thinking,
+              streamingDelta: undefined // Clear streaming delta when done
+            }
           : msg
       ));
     } catch (error) {
@@ -248,6 +268,8 @@ export function useChat() {
     } finally {
       setIsLoading(false);
       setStreamingMessageId(null);
+      // Reset the last streamed content ref
+      lastStreamedContentRef.current = '';
     }
   }, [messages, currentPersona]);
 
