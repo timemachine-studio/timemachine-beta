@@ -21,7 +21,6 @@ export interface ChatActions {
 export interface ChatInputProps {
   onSendMessage: (message: string, imageData?: string) => Promise<void>;
   isLoading?: boolean;
-  currentPersona?: keyof typeof AI_PERSONAS;
 }
 
 export interface ShowHistoryProps {
