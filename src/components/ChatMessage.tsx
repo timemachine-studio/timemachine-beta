@@ -1,44 +1,49 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Bot, User } from 'lucide-react';
+import { AIMessage } from './AIMessage';
+import { UserMessage } from './UserMessage';
+import { Message } from '../../types/chat';
+import { AI_PERSONAS } from '../../config/constants';
 
-interface ChatMessageProps {
-  content: string;
-  isAI: boolean;
+interface ChatMessageProps extends Message {
+  isChatMode: boolean;
+  onAnimationComplete: (messageId: number) => void;
+  currentPersona: keyof typeof AI_PERSONAS;
+  isStreaming?: boolean;
+  previousMessage?: string | null;
 }
 
-export function ChatMessage({ content, isAI }: ChatMessageProps) {
+export function ChatMessage({ 
+  content, 
+  thinking, 
+  isAI, 
+  isChatMode, 
+  id, 
+  hasAnimated, 
+  onAnimationComplete, 
+  currentPersona,
+  isStreaming,
+  previousMessage,
+  imageData
+}: ChatMessageProps) {
   if (isAI) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex items-center justify-center min-h-[200px] p-8"
-      >
-        <div className="flex items-center gap-4">
-          <Bot className="w-8 h-8 text-purple-600" />
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-4xl font-bold text-center text-gray-800 leading-relaxed"
-          >
-            {content}
-          </motion.p>
-        </div>
-      </motion.div>
+      <AIMessage 
+        content={content} 
+        thinking={thinking}
+        isChatMode={isChatMode} 
+        messageId={id}
+        hasAnimated={hasAnimated}
+        onAnimationComplete={onAnimationComplete}
+        currentPersona={currentPersona}
+        isStreaming={isStreaming}
+        previousMessage={previousMessage}
+      />
     );
   }
-
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="flex items-start gap-2 px-4 py-2"
-    >
-      <User className="w-4 h-4 mt-1 text-gray-600" />
-      <p className="text-sm text-gray-600">{content}</p>
-    </motion.div>
+    <UserMessage 
+      content={content} 
+      imageData={imageData}
+    />
   );
 }
