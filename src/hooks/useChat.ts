@@ -18,7 +18,6 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentPersona, setCurrentPersona] = useState<keyof typeof AI_PERSONAS>('default');
   const [currentEmotion, setCurrentEmotion] = useState<string>('joy');
-  const [streamingMessageId, setStreamingMessageId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAboutUs, setShowAboutUs] = useState(false);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
@@ -193,35 +192,11 @@ export function useChat() {
     setError(null);
 
     try {
-      const streamingId = Date.now() + 1;
-      setStreamingMessageId(streamingId);
-      
-      setMessages(prev => [...prev, {
-        id: streamingId,
-        content: '',
-        thinking: messagePersona === 'pro' ? '' : undefined,
-        isAI: true,
-        hasAnimated: false
-      }]);
-
       const aiResponse = await generateAIResponse(
         [...messages, userMessage],
         imageData,
         '', // System prompt is now handled server-side
-        messagePersona,
-        (data) => {
-          const cleanedContent = cleanContent(data.content);
-          
-          setMessages(prev => prev.map(msg => 
-            msg.id === streamingId
-              ? { 
-                  ...msg, 
-                  content: cleanedContent,
-                  thinking: data.thinking !== undefined ? data.thinking : msg.thinking
-                }
-              : msg
-          ));
-        }
+        messagePersona
       );
       
       const emotion = extractEmotion(aiResponse.content);
@@ -231,29 +206,26 @@ export function useChat() {
         setCurrentEmotion(emotion);
       }
 
-      setMessages(prev => prev.map(msg =>
-        msg.id === streamingId
-          ? { 
-              ...msg, 
-              content: cleanedContent, 
-              thinking: aiResponse.thinking
-            }
-          : msg
-      ));
+      const aiMessage: Message = {
+        id: Date.now() + 1,
+        content: cleanedContent,
+        thinking: aiResponse.thinking,
+        isAI: true,
+        hasAnimated: false
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       console.error('Failed to generate response:', error);
       
       // Check if it's a rate limit error
       if (error && typeof error === 'object' && 'type' in error && error.type === 'rateLimit') {
         setShowRateLimitModal(true);
-        // Remove the streaming message since we're showing a modal instead
-        setMessages(prev => prev.filter(msg => msg.id !== (Date.now() + 1)));
       } else {
         setError('Failed to generate response. Please try again.');
       }
     } finally {
       setIsLoading(false);
-      setStreamingMessageId(null);
     }
   }, [messages, currentPersona]);
 
@@ -286,7 +258,6 @@ export function useChat() {
     isLoading,
     currentPersona,
     currentEmotion,
-    streamingMessageId,
     error,
     showAboutUs,
     showRateLimitModal,
