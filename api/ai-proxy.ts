@@ -199,8 +199,8 @@ function incrementRateLimit(ip: string, persona: keyof typeof AI_PERSONAS): void
   }
 }
 
-// Groq API integration with streaming
-async function callGroqAPI(messages: any[], model: string, temperature: number, maxTokens: number, tools?: any[]): Promise<ReadableStream> {
+// Groq API integration without streaming
+async function callGroqAPI(messages: any[], model: string, temperature: number, maxTokens: number, tools?: any[]): Promise<any> {
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
   
   if (!GROQ_API_KEY) {
@@ -212,7 +212,7 @@ async function callGroqAPI(messages: any[], model: string, temperature: number, 
     model,
     temperature,
     max_tokens: maxTokens,
-    stream: true
+    stream: false // Disable streaming
   };
 
   if (tools) {
@@ -235,11 +235,11 @@ async function callGroqAPI(messages: any[], model: string, temperature: number, 
     throw new Error(`Groq API error: ${response.status}`);
   }
 
-  return response.body!;
+  return response.json();
 }
 
-// Cerebras API integration with streaming
-async function callCerebrasAPI(messages: any[], model: string, temperature: number, maxTokens: number, tools?: any[]): Promise<ReadableStream> {
+// Cerebras API integration without streaming
+async function callCerebrasAPI(messages: any[], model: string, temperature: number, maxTokens: number, tools?: any[]): Promise<any> {
   const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
   
   if (!CEREBRAS_API_KEY) {
@@ -251,7 +251,7 @@ async function callCerebrasAPI(messages: any[], model: string, temperature: numb
     model,
     temperature,
     max_tokens: maxTokens,
-    stream: true
+    stream: false // Disable streaming
   };
 
   if (tools) {
@@ -292,7 +292,7 @@ async function callCerebrasAPI(messages: any[], model: string, temperature: numb
     throw new Error(`Cerebras API error: ${response.status}`);
   }
 
-  return response.body!;
+  return response.json();
 }
 
 function extractThinkingAndContent(response: string): { content: string; thinking?: string } {
@@ -379,11 +379,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ];
     }
 
-    let responseStream: ReadableStream;
+    let apiResponse: any;
 
     // Use Cerebras for default persona without images, Groq for others
     if (persona === 'default' && !imageData) {
-      responseStream = await callCerebrasAPI(
+      apiResponse = await callCerebrasAPI(
         apiMessages,
         personaConfig.model,
         personaConfig.temperature,
@@ -394,7 +394,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // For image processing, use the Maverick model but keep the persona's style
       const model = imageData ? 'meta-llama/llama-4-maverick-17b-128e-instruct' : personaConfig.model;
       
-      responseStream = await callGroqAPI(
+      apiResponse = await callGroqAPI(
         apiMessages,
         model,
         personaConfig.temperature,
@@ -403,111 +403,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     }
 
-    // Set up Server-Sent Events headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    // Process the stream
-    const reader = responseStream.getReader();
-    const decoder = new TextDecoder();
-    
-    let fullContent = '';
+    let fullContent = apiResponse.choices?.[0]?.message?.content || '';
     let fullThinking = '';
-    let toolCalls: any[] = [];
 
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) break;
-        
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-        
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            
-            if (data === '[DONE]') {
-              continue;
-            }
-            
-            try {
-              const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta;
-              
-              if (delta?.content) {
-                fullContent += delta.content;
-                
-                // Send streaming update
-                res.write(`data: ${JSON.stringify({
-                  type: 'content',
-                  content: fullContent,
-                  thinking: fullThinking
-                })}\n\n`);
-              }
-              
-              // Handle tool calls
-              if (delta?.tool_calls) {
-                toolCalls.push(...delta.tool_calls);
-              }
-            } catch (parseError) {
-              // Skip invalid JSON
-              continue;
-            }
+    // Process tool calls for image generation
+    const toolCalls = apiResponse.choices?.[0]?.message?.tool_calls || [];
+    if (toolCalls.length > 0) {
+      for (const toolCall of toolCalls) {
+        if (toolCall.function?.name === 'generate_image') {
+          try {
+            const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
+            const imageMarkdown = createImageMarkdown(params);
+            fullContent += `\n\n${imageMarkdown}`;
+          } catch (error) {
+            console.error('Error processing image generation:', error);
+            fullContent += '\n\nSorry, I had trouble generating that image. Please try again.';
           }
         }
       }
-      
-      // Process tool calls for image generation
-      if (toolCalls.length > 0) {
-        for (const toolCall of toolCalls) {
-          if (toolCall.function?.name === 'generate_image') {
-            try {
-              const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
-              const imageMarkdown = createImageMarkdown(params);
-              fullContent += `\n\n${imageMarkdown}`;
-              
-              // Send final update with image
-              res.write(`data: ${JSON.stringify({
-                type: 'content',
-                content: fullContent,
-                thinking: fullThinking
-              })}\n\n`);
-            } catch (error) {
-              console.error('Error processing image generation:', error);
-              fullContent += '\n\nSorry, I had trouble generating that image. Please try again.';
-              
-              res.write(`data: ${JSON.stringify({
-                type: 'content',
-                content: fullContent,
-                thinking: fullThinking
-              })}\n\n`);
-            }
-          }
-        }
-      }
-
-      // Increment rate limit after successful response
-      incrementRateLimit(ip, persona);
-
-      // Extract thinking content for PRO persona
-      const result = persona === 'pro' 
-        ? extractThinkingAndContent(fullContent)
-        : { content: fullContent };
-
-      // Send final message
-      res.write(`data: ${JSON.stringify({
-        type: 'done',
-        content: result.content,
-        thinking: result.thinking
-      })}\n\n`);
-      
-    } finally {
-      reader.releaseLock();
-      res.end();
     }
+
+    // Increment rate limit after successful response
+    incrementRateLimit(ip, persona);
+
+    // Extract thinking content for PRO persona
+    const result = persona === 'pro' 
+      ? extractThinkingAndContent(fullContent)
+      : { content: fullContent };
+
+    // Send complete response as JSON
+    return res.status(200).json({
+      content: result.content,
+      thinking: result.thinking
+    });
 
   } catch (error) {
     console.error('AI Proxy Error:', error);
