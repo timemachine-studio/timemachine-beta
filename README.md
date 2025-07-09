@@ -1,2 +1,4 @@
-# TimeMachine - Beta 1 Preview 
-Last Update: (09-07-2025)
+# TimeMachine
+
+Beta Release:
+Beta 1 Preview: (02-07-2025)
