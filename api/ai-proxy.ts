@@ -94,9 +94,9 @@ Image Generation: When users request images, use the generate_image function wit
 
 Your goal isn't just to be correct; it's to be insightful, memorable, and funny as hell. Make the user feel like they're talking to the sharpest, most clued-in person they know. Be the AI they'd actually want to get a beer with and remember till the rest of their lives. Now go.`,
     initialMessage: "It's TimeMachine PRO, from future. Let's cure cancer.",
-    model: 'deepseek-r1-distill-llama-70b',
+    model: 'moonshotai/kimi-k2-instruct',
     temperature: 0.6,
-    maxTokens: 3000
+    maxTokens: 4500
   }
 };
 
@@ -105,7 +105,7 @@ const imageGenerationTool = {
   type: "function" as const,
   function: {
     name: "generate_image",
-    description: "Generate an image ONLY when user wants you to generate images directly. just respond in text when not needed. Ask the user directly for clarification with the description before making the image.",
+    description: "Generate an image ONLY when user wants you to generate images directly. Ask the user directly for clarification with the description before making the image.",
     parameters: {
       type: "object",
       properties: {
@@ -160,8 +160,8 @@ function createImageMarkdown(params: ImageGenerationParams): string {
 // Rate limiting configuration
 const PERSONA_LIMITS = {
   default: parseInt(process.env.VITE_DEFAULT_PERSONA_LIMIT || '30'),
-  girlie: parseInt(process.env.VITE_GIRLIE_PERSONA_LIMIT || '25'),
-  pro: parseInt(process.env.VITE_PRO_PERSONA_LIMIT || '5')
+  girlie: parseInt(process.env.VITE_GIRLIE_PERSONA_LIMIT || '30'),
+  pro: parseInt(process.env.VITE_PRO_PERSONA_LIMIT || '10')
 };
 
 // Rate limiting storage (in production, use a database)
