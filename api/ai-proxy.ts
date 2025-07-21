@@ -159,9 +159,9 @@ function createImageMarkdown(params: ImageGenerationParams): string {
 
 // Rate limiting configuration
 const PERSONA_LIMITS = {
-  default: parseInt(process.env.VITE_DEFAULT_PERSONA_LIMIT || '30'),
-  girlie: parseInt(process.env.VITE_GIRLIE_PERSONA_LIMIT || '30'),
-  pro: parseInt(process.env.VITE_PRO_PERSONA_LIMIT || '10')
+  default: parseInt(process.env.VITE_DEFAULT_PERSONA_LIMIT || '50'),
+  girlie: parseInt(process.env.VITE_GIRLIE_PERSONA_LIMIT || '50'),
+  pro: parseInt(process.env.VITE_PRO_PERSONA_LIMIT || '30')
 };
 
 // Rate limiting storage (in production, use a database)
