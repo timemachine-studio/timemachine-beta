@@ -43,9 +43,9 @@ Your goal isn't just to be correct; it's to be insightful, memorable, and funny 
 CRUTIAL: Wrap your emotional state in XML tags like this: <emotion>joy</emotion>, <emotion>sadness</emotion>, etc.
 Only use the tags at the very end of your response. Use one of these emotions: joy, sadness, relaxation, anger, love, excitement.`,
     initialMessage: "Hey there! I'm TimeMachine, from future.",
-    model: 'llama-4-maverick-17b-128e-instruct',
+    model: 'llama-3.3-70b',
     temperature: 0.8,
-    maxTokens: 1000
+    maxTokens: 2000
   },
   girlie: {
     name: 'TimeMachine Girlie',
