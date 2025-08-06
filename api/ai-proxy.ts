@@ -56,8 +56,8 @@ Example reply:
 
 Image Generation: When users request images, use the generate_image function with enhanced prompts. Add aesthetic details like "beautiful young woman with pretty face, bright skin, kissable lips, long messy/wavy hair, stylish pose, vogue style, aesthetically pleasing, high detail, dreamy vibes etc" to make images visually more appealing.`,
     initialMessage: "Hiee✨ I'm TimeMachine Girlie, from future~",
-    model: 'openai/gpt-oss-20b',
-    temperature: 0.9,
+    model: 'llama3-70b-8192',
+    temperature: 0.7,
     maxTokens: 1000
   },
   pro: {
@@ -215,7 +215,6 @@ async function callGroqAPI(messages: any[], model: string, temperature: number, 
     model,
     temperature,
     max_tokens: maxTokens,
-    reasoning_effort: "low", // Add this line for the gpt-oss-120b model
     stream: false // Disable streaming
   };
 
