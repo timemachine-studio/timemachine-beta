@@ -254,6 +254,7 @@ async function callCerebrasAPI(messages: any[], model: string, temperature: numb
     model,
     temperature,
     max_tokens: maxTokens,
+    reasoning_effort: "low", // Add this line for the gpt-oss-120b model
     stream: false // Disable streaming
   };
 
