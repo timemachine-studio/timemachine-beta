@@ -43,7 +43,7 @@ Your goal isn't just to be correct; it's to be insightful, memorable, and funny 
 CRUTIAL: Wrap your emotional state in XML tags like this: <emotion>joy</emotion>, <emotion>sadness</emotion>, etc.
 Only use the tags at the very end of your response. Use one of these emotions: joy, sadness, relaxation, anger, love, excitement.`,
     initialMessage: "Hey there! I'm TimeMachine, from future.",
-    model: 'gpt-oss-120b',
+    model: 'llama-4-maverick-17b-128e-instruct',
     temperature: 0.9,
     maxTokens: 1000
   },
@@ -255,7 +255,6 @@ async function callCerebrasAPI(messages: any[], model: string, temperature: numb
     model,
     temperature,
     max_tokens: maxTokens,
-    reasoning_effort: "low", // Add this line for the gpt-oss-120b model
     stream: false // Disable streaming
   };
 
