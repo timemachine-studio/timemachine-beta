@@ -17,7 +17,7 @@ export const PERSONA_LIMITS = {
 // Client-side AI Personas (for UI display only)
 export const AI_PERSONAS = {
   default: {
-    name: 'TimeMachine',
+    name: 'TimeMachine Air',
     initialMessage: "Hey there! I'm TimeMachine, from future",
   },
   girlie: {
@@ -52,3 +52,27 @@ export const INITIAL_MESSAGE = {
   content: AI_PERSONAS.default.initialMessage,
   isAI: true,
 };
+
+// Pro Heat Levels configuration
+export const PRO_HEAT_LEVELS = {
+  1: {
+    name: 'Heat Level 1',
+    description: 'Conservative and careful responses'
+  },
+  2: {
+    name: 'Heat Level 2', 
+    description: 'Balanced and thoughtful approach'
+  },
+  3: {
+    name: 'Heat Level 3',
+    description: 'More direct and confident responses'
+  },
+  4: {
+    name: 'Heat Level 4',
+    description: 'Bold and assertive communication'
+  },
+  5: {
+    name: 'Heat Level 5',
+    description: 'Maximum intensity and directness'
+  }
+} as const;

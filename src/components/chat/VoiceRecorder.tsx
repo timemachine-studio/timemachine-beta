@@ -6,7 +6,7 @@ import { AI_PERSONAS } from '../../config/constants';
 import AiMicIcon from '../icons/AiMicIcon';
 
 interface VoiceRecorderProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, imageData?: string | string[], audioData?: string) => void;
   disabled?: boolean;
   currentPersona?: keyof typeof AI_PERSONAS;
 }
@@ -105,9 +105,9 @@ export function VoiceRecorder({ onSendMessage, disabled, currentPersona = 'defau
     try {
       setShowError(false);
       if (isRecording) {
-        const transcription = await stopRecording();
-        if (transcription.trim()) {
-          await onSendMessage(transcription);
+        const audioData = await stopRecording();
+        if (audioData) {
+          await onSendMessage('', undefined, audioData);
         }
       } else if (!disabled) {
         await startRecording();

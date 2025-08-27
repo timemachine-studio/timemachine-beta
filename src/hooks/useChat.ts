@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Message } from '../types/chat';
-import { generateAIResponse } from '../services/ai/aiProxyService';
+import { generateAIResponse, generateAIResponseStreaming } from '../services/ai/aiProxyService';
 import { INITIAL_MESSAGE, AI_PERSONAS } from '../config/constants';
 
 interface ChatSession {
@@ -17,11 +17,14 @@ export function useChat() {
   const [isChatMode, setChatMode] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPersona, setCurrentPersona] = useState<keyof typeof AI_PERSONAS>('default');
+  const [currentProHeatLevel, setCurrentProHeatLevel] = useState<number>(2);
   const [currentEmotion, setCurrentEmotion] = useState<string>('joy');
   const [error, setError] = useState<string | null>(null);
   const [showAboutUs, setShowAboutUs] = useState(false);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
+  const [streamingMessageId, setStreamingMessageId] = useState<number | null>(null);
+  const [useStreaming, setUseStreaming] = useState(true); // Toggle for streaming vs non-streaming
 
   // Set theme based on persona
   const setPersonaTheme = useCallback((persona: keyof typeof AI_PERSONAS) => {
@@ -43,7 +46,7 @@ export function useChat() {
 
   // Save chat session function
   const saveChatSession = useCallback((sessionId: string, messagesToSave: Message[], persona: keyof typeof AI_PERSONAS) => {
-    if (messagesToSave.length <= 1) return; // Don't save if only initial message
+    // Save all chat sessions, even short ones
 
     try {
       const chatSessions = JSON.parse(localStorage.getItem('chatSessions') || '[]') as ChatSession[];
@@ -88,6 +91,12 @@ export function useChat() {
     }
 
     setCurrentPersona(persona);
+    
+    // Reset heat level to 2 when switching to pro persona
+    if (persona === 'pro') {
+      setCurrentProHeatLevel(2);
+    }
+    
     setError(null);
     
     // Start new chat with new persona
@@ -128,6 +137,26 @@ export function useChat() {
     setError(null);
   }, [currentSessionId, messages, currentPersona, saveChatSession]);
 
+  // Handle streaming message updates
+  const updateStreamingMessage = useCallback((messageId: number, content: string, append: boolean = true) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId 
+        ? { ...msg, content: append ? msg.content + content : content }
+        : msg
+    ));
+  }, []);
+
+  // Complete streaming message
+  const completeStreamingMessage = useCallback((messageId: number, finalContent: string, thinking?: string, audioUrl?: string) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId 
+        ? { ...msg, content: finalContent, thinking, audioUrl, hasAnimated: false }
+        : msg
+    ));
+    setStreamingMessageId(null);
+    setIsLoading(false);
+  }, []);
+
   const extractEmotion = (content: string): string | null => {
     const match = content.match(/<emotion>([a-z]+)<\/emotion>/i);
     if (!match) return null;
@@ -144,9 +173,9 @@ export function useChat() {
   const cleanContent = (content: string): string => {
     const emotion = extractEmotion(content);
     if (emotion) {
-      return content.replace(/<emotion>[a-z]+<\/emotion>/i, '').trim();
+      return content.replace(/<emotion>[a-z]+<\/emotion>/i, '').replace(/<reason>[\s\S]*?<\/reason>/i, '').trim();
     }
-    return content;
+    return content.replace(/<reason>[\s\S]*?<\/reason>/i, '').trim();
   };
 
   // Dismiss rate limit modal
@@ -168,7 +197,7 @@ export function useChat() {
     }
   }, [currentSessionId]);
 
-  const handleSendMessage = useCallback(async (content: string, imageData?: string | string[]) => {
+  const handleSendMessage = useCallback(async (content: string, imageData?: string | string[], audioData?: string) => {
     let messagePersona = currentPersona;
     let messageContent = content;
 
@@ -179,55 +208,115 @@ export function useChat() {
       messageContent = mentionMatch[2];
     }
 
+    // Handle audio data - if we have audio but no text content, create a message indicating audio input
+    let finalContent = messageContent;
+    if (audioData && !messageContent.trim()) {
+      finalContent = '[Audio message]'; // Placeholder text for UI
+    }
+
     const userMessage: Message = {
       id: Date.now(),
-      content: messageContent,
+      content: finalContent,
       isAI: false,
       hasAnimated: false,
-      imageData: imageData
+      imageData: imageData,
+      audioData: audioData
     };
     
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setError(null);
 
-    try {
-      const aiResponse = await generateAIResponse(
+    // Create placeholder AI message for streaming
+    const aiMessageId = Date.now() + 1;
+    const aiMessage: Message = {
+      id: aiMessageId,
+      content: '',
+      isAI: true,
+      hasAnimated: false
+    };
+
+    setMessages(prev => [...prev, aiMessage]);
+    setStreamingMessageId(aiMessageId);
+
+    if (useStreaming) {
+      // Use streaming response
+      generateAIResponseStreaming(
         [...messages, userMessage],
         imageData,
         '', // System prompt is now handled server-side
-        messagePersona
+        messagePersona,
+        audioData,
+        messagePersona === 'pro' ? currentProHeatLevel : undefined,
+        // onChunk callback
+        (chunk: string) => {
+          updateStreamingMessage(aiMessageId, chunk, true);
+        },
+        // onComplete callback
+        (response) => {
+          const emotion = extractEmotion(response.content);
+          const cleanedContent = cleanContent(response.content);
+          
+          if (emotion) {
+            setCurrentEmotion(emotion);
+          }
+
+          completeStreamingMessage(aiMessageId, cleanedContent, response.thinking, response.audioUrl);
+        },
+        // onError callback
+        (error) => {
+          console.error('Failed to generate streaming response:', error);
+          
+          // Check if it's a rate limit error
+          if (error && typeof error === 'object' && 'type' in error && error.type === 'rateLimit') {
+            setShowRateLimitModal(true);
+          } else {
+            setError('Failed to generate response. Please try again.');
+          }
+          
+          // Remove the placeholder message on error
+          setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+          setStreamingMessageId(null);
+          setIsLoading(false);
+        }
       );
-      
-      const emotion = extractEmotion(aiResponse.content);
-      const cleanedContent = cleanContent(aiResponse.content);
-      
-      if (emotion) {
-        setCurrentEmotion(emotion);
-      }
+    } else {
+      // Use non-streaming response (fallback)
+      try {
+        const aiResponse = await generateAIResponse(
+          [...messages, userMessage],
+          imageData,
+          '', // System prompt is now handled server-side
+          messagePersona,
+          audioData,
+          messagePersona === 'pro' ? currentProHeatLevel : undefined
+        );
+        
+        const emotion = extractEmotion(aiResponse.content);
+        const cleanedContent = cleanContent(aiResponse.content);
+        
+        if (emotion) {
+          setCurrentEmotion(emotion);
+        }
 
-      const aiMessage: Message = {
-        id: Date.now() + 1,
-        content: cleanedContent,
-        thinking: aiResponse.thinking,
-        isAI: true,
-        hasAnimated: false
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Failed to generate response:', error);
-      
-      // Check if it's a rate limit error
-      if (error && typeof error === 'object' && 'type' in error && error.type === 'rateLimit') {
-        setShowRateLimitModal(true);
-      } else {
-        setError('Failed to generate response. Please try again.');
+        completeStreamingMessage(aiMessageId, cleanedContent, aiResponse.thinking, aiResponse.audioUrl);
+      } catch (error) {
+        console.error('Failed to generate response:', error);
+        
+        // Check if it's a rate limit error
+        if (error && typeof error === 'object' && 'type' in error && error.type === 'rateLimit') {
+          setShowRateLimitModal(true);
+        } else {
+          setError('Failed to generate response. Please try again.');
+        }
+        
+        // Remove the placeholder message on error
+        setMessages(prev => prev.filter(msg => msg.id !== aiMessageId));
+        setStreamingMessageId(null);
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
     }
-  }, [messages, currentPersona]);
+  }, [messages, currentPersona, currentProHeatLevel]);
 
   const markMessageAsAnimated = useCallback((messageId: number) => {
     setMessages(prev => prev.map(msg => 
@@ -257,17 +346,22 @@ export function useChat() {
     isChatMode,
     isLoading,
     currentPersona,
+    currentProHeatLevel,
     currentEmotion,
     error,
     showAboutUs,
     showRateLimitModal,
+    streamingMessageId,
+    useStreaming,
     setChatMode,
     handleSendMessage,
     handlePersonaChange,
+    setCurrentProHeatLevel,
     startNewChat,
     markMessageAsAnimated,
     dismissAboutUs,
     dismissRateLimitModal,
-    loadChat
+    loadChat,
+    setUseStreaming
   };
 }

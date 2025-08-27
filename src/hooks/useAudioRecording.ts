@@ -1,16 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
 import RecordRTC from 'recordrtc';
-import Groq from 'groq-sdk';
-import { GROQ_API_KEY } from '../config/constants';
-
-// Initialize Groq client only if API key is available
-let groq: Groq | null = null;
-if (GROQ_API_KEY) {
-  groq = new Groq({
-    apiKey: GROQ_API_KEY,
-    dangerouslyAllowBrowser: true
-  });
-}
 
 export function useAudioRecording() {
   const [isRecording, setIsRecording] = useState(false);
@@ -23,11 +12,6 @@ export function useAudioRecording() {
   const startRecording = useCallback(async () => {
     try {
       setError(null);
-      
-      // Check if Groq client is available
-      if (!groq) {
-        throw new Error('Audio transcription is not available. Please configure your API key.');
-      }
 
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -85,13 +69,6 @@ export function useAudioRecording() {
         return;
       }
 
-      if (!groq) {
-        const error = 'Audio transcription is not available. Please configure your API key.';
-        setError(error);
-        reject(new Error(error));
-        return;
-      }
-
       try {
         recorder.stopRecording(async () => {
           try {
@@ -116,22 +93,18 @@ export function useAudioRecording() {
             analyserRef.current = null;
             setIsRecording(false);
 
-            // Convert blob to File for Groq API
-            const audioFile = new File([blob], 'recording.webm', { type: 'audio/webm' });
-
-            // Transcribe using Groq Whisper
-            const transcription = await groq!.audio.transcriptions.create({
-              file: audioFile,
-              model: 'whisper-large-v3-turbo',
-              language: 'en',
-              response_format: 'text'
-            });
-            
-            if (typeof transcription === 'string') {
-              resolve(transcription);
-            } else {
-              resolve(transcription.text || '');
-            }
+            // Convert blob to base64 string
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64String = reader.result as string;
+              resolve(base64String);
+            };
+            reader.onerror = () => {
+              const error = 'Failed to convert audio to base64';
+              setError(error);
+              reject(new Error(error));
+            };
+            reader.readAsDataURL(blob);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to process recording';
             setError(message);

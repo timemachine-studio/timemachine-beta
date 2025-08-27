@@ -87,6 +87,37 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
     }
   }, [message]);
 
+  // Global keydown listener for type-to-chat functionality
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      // Check if any input element is currently focused
+      const activeElement = document.activeElement;
+      if (activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT' ||
+        activeElement.getAttribute('contenteditable') === 'true'
+      )) {
+        return; // Don't interfere with other inputs
+      }
+
+      // Check if the key is a printable character
+      if (
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !event.shiftKey // Allow shift for capital letters
+      ) {
+        // Focus the textarea and let the browser handle the input
+        textareaRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((message.trim() || selectedImages.length > 0) && !isLoading && !isUploading) {
@@ -105,8 +136,8 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
         }
       } else {
         await onSendMessage(message);
-        setMessage('');
       }
+      setMessage('');
     }
   };
 
@@ -157,21 +188,6 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
     setSelectedImages(validImageFiles);
     const urls = validImageFiles.map(file => URL.createObjectURL(file));
     setImagePreviewUrls(urls);
-
-    if (currentPersona !== 'default') {
-      setIsUploading(true);
-      try {
-        const base64Images = await Promise.all(validImageFiles.map(convertImageToBase64));
-        await onSendMessage('', base64Images);
-        setSelectedImages([]);
-        setImagePreviewUrls([]);
-      } catch (error) {
-        alert('Failed to process images. Please try again.');
-        console.error('Error processing images:', error);
-      } finally {
-        setIsUploading(false);
-      }
-    }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -197,21 +213,6 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
     setSelectedImages(validImageFiles);
     const urls = validImageFiles.map(file => URL.createObjectURL(file));
     setImagePreviewUrls(urls);
-
-    if (currentPersona !== 'default') {
-      setIsUploading(true);
-      try {
-        const base64Images = await Promise.all(validImageFiles.map(convertImageToBase64));
-        await onSendMessage('', base64Images);
-        setSelectedImages([]);
-        setImagePreviewUrls([]);
-      } catch (error) {
-        alert('Failed to process images. Please try again.');
-        console.error('Error processing images:', error);
-      } finally {
-        setIsUploading(false);
-      }
-    }
   };
 
   const removeImage = (index: number) => {
@@ -229,6 +230,18 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
   return (
     <form onSubmit={handleSubmit} className="max-w-4xl mx-auto sticky bottom-4">
       {imagePreviewUrls.length > 0 && currentPersona === 'default' && (
+        <div className="flex gap-2 mb-4">
+          {imagePreviewUrls.map((url, index) => (
+            <ImagePreview
+              key={index}
+              url={url}
+              onRemove={() => removeImage(index)}
+              isUploading={isUploading}
+            />
+          ))}
+        </div>
+      )}
+      {imagePreviewUrls.length > 0 && currentPersona !== 'default' && (
         <div className="flex gap-2 mb-4">
           {imagePreviewUrls.map((url, index) => (
             <ImagePreview

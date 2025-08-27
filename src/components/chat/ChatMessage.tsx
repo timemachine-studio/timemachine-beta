@@ -9,6 +9,8 @@ interface ChatMessageProps extends Message {
   onAnimationComplete: (messageId: number) => void;
   currentPersona: keyof typeof AI_PERSONAS;
   previousMessage?: string | null;
+  isStreaming?: boolean;
+  streamingMessageId?: number | null;
 }
 
 export function ChatMessage({ 
@@ -21,7 +23,11 @@ export function ChatMessage({
   onAnimationComplete, 
   currentPersona,
   previousMessage,
-  imageData
+  imageData,
+  audioData,
+  audioUrl,
+  isStreaming,
+  streamingMessageId
 }: ChatMessageProps) {
   if (isAI) {
     return (
@@ -34,6 +40,9 @@ export function ChatMessage({
         onAnimationComplete={onAnimationComplete}
         currentPersona={currentPersona}
         previousMessage={previousMessage}
+        isStreaming={isStreaming}
+        audioUrl={audioUrl}
+        isStreamingActive={streamingMessageId === id}
       />
     );
   }
@@ -41,6 +50,7 @@ export function ChatMessage({
     <UserMessage 
       content={content} 
       imageData={imageData}
+      audioData={audioData}
     />
   );
 }

@@ -5,6 +5,8 @@ export interface Message {
   hasAnimated?: boolean;
   thinking?: string;
   imageData?: string | string[]; // Add imageData field
+  audioData?: string; // Add audioData field for base64 encoded audio
+  audioUrl?: string; // Add audioUrl field for AI audio responses
 }
 
 export interface ChatState {
@@ -14,12 +16,12 @@ export interface ChatState {
 }
 
 export interface ChatActions {
-  handleSendMessage: (message: string, imageData?: string) => Promise<void>;
+  handleSendMessage: (message: string, imageData?: string, audioData?: string) => Promise<void>;
   setChatMode: (isChatMode: boolean) => void;
 }
 
 export interface ChatInputProps {
-  onSendMessage: (message: string, imageData?: string) => Promise<void>;
+  onSendMessage: (message: string, imageData?: string, audioData?: string) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -35,4 +37,5 @@ export interface MessageProps {
   onAnimationComplete?: () => void;
   thinking?: string;
   imageData?: string | string[];
+  audioData?: string;
 }
