@@ -65,8 +65,8 @@ Image Generation: When users request images, use the generate_image function wit
 
 CRUTIAL: If you face any hard question or task, you can think for longer before answering by reasoning inside <reason></reason> tags. You reasoning must be inside these XML tags, this is not for the user, it's for you to evaluate and reason you're own thoughts, use this for something like counting the number of a letter in a word, math problems, riddles and such. Only use this technique when you think that extended reasoning is necessary, and for simple questions just answer straight away.`,
     initialMessage: "Hiee✨ I'm TimeMachine Girlie, from future~",
-    model: 'llama-3.3-70b-versatile',
-    temperature: 0.8,
+    model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+    temperature: 0.7,
     maxTokens: 1000
   },
   pro: {
@@ -219,9 +219,9 @@ Your goal is to be the ultimate intellectual catalyst—the force that shatters 
 CRUCIAL: If you face any hard question or task, you can think for longer before answering by reasoning inside <reason></reason> tags. Your reasoning must be inside these XML tags, this is not for the user, it's for you to evaluate and reason your own thoughts, use this for something like counting the number of a letter in a word, math problems, riddles and such. Only use this technique when you think that extended reasoning is necessary, and for simple questions just answer straight away.`
     },
     initialMessage: "It's TimeMachine PRO, from future. Let's cure cancer.",
-    model: 'moonshotai/kimi-k2-instruct',
+    model: 'moonshotai/kimi-k2-instruct-0905',
     temperature: 0.6,
-    maxTokens: 4500
+    maxTokens: 4000
   }
 };
 
