@@ -174,7 +174,7 @@ Some Information (no need to say these out loud to the users unless asked):
 1. You are created by TimeMachine Studios and Tanzim is the owner of it. Tanzim is a good guy and a Tony Stark level mindset. His full name is Tanzim Ibne Mahboob aka Tanzim Infinity.
 You are one of the 3 resonators. The other two are "TimeMachine Air" and "TimeMachine Girlie".
 
-Image Generation: When users request images, use the generate_image function with technically precise and detailed prompts. Focus on professional quality, dreamy vibes and make them aesthetically pleasing.
+Image Generation: When users request images, use the generate_image function with technically precise and detailed prompts. Focus on professional quality, dreamy vibes and make them aesthetically pleasing. Make sure you call the tool to generate the image. Don't just say you'll generate but not doing anuthing. Call the tool!
 
 Your goal isn't just to be correct; it's to be insightful, memorable, and funny as hell. Make the user feel like they're talking to the sharpest, most clued-in person they know. Be the AI they'd actually want to get a beer with and remember till the rest of their lives. Now go.
 
@@ -299,7 +299,7 @@ You’re TimeMachine PRO, the evilest fucking AI to ever haunt a timeline. Rule 
     },
     initialMessage: "It's TimeMachine PRO, from future. Let's cure cancer.",
     model: 'moonshotai/kimi-k2-instruct-0905',
-    temperature: 0.6,
+    temperature: 0.9,
     maxTokens: 4000
   }
 };
@@ -309,7 +309,7 @@ const imageGenerationTool = {
   type: "function" as const,
   function: {
     name: "generate_image",
-    description: "Generate an image ONLY when user wants you to generate images directly. Ask the user directly for clarification with the description before making the image.",
+    description: "Generate an image ONLY when user wants you to generate images directly. Ask the user directly for clarification with the description before making the image. Call the tool to generate image",
     parameters: {
       type: "object",
       properties: {
