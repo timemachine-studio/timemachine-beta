@@ -369,7 +369,7 @@ function generateImageUrl(params: ImageGenerationParams): string {
   const encodedPrompt = encodeURIComponent(prompt);
   const hardcodedToken = "Cf5zT0TTvLLEskfY";
   
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=false&nologo=true&model=seedream&token=${hardcodedToken}`;
+  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=false&nologo=true&model=nanobanana&token=${hardcodedToken}`;
 }
 
 function createImageMarkdown(params: ImageGenerationParams): string {
