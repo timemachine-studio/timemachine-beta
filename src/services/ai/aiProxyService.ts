@@ -26,6 +26,7 @@ export async function generateAIResponseStreaming(
   currentPersona: keyof typeof AI_PERSONAS = 'default',
   audioData?: string,
   heatLevel?: number,
+  inputImageUrls?: string[],
   onChunk?: (chunk: string) => void,
   onComplete?: (response: AIResponse) => void,
   onError?: (error: Error) => void
@@ -46,6 +47,7 @@ export async function generateAIResponseStreaming(
         imageData,
         audioData,
         heatLevel,
+        inputImageUrls,
         stream: true
       })
     });
@@ -138,7 +140,8 @@ export async function generateAIResponse(
   systemPrompt: string = '', // Not used anymore, kept for compatibility
   currentPersona: keyof typeof AI_PERSONAS = 'default',
   audioData?: string,
-  heatLevel?: number
+  heatLevel?: number,
+  inputImageUrls?: string[]
 ): Promise<AIResponse> {
   try {
     // Call the Vercel API route without streaming
@@ -156,6 +159,7 @@ export async function generateAIResponse(
         imageData,
         audioData,
         heatLevel,
+        inputImageUrls,
         stream: false
       })
     });

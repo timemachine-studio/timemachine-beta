@@ -357,19 +357,27 @@ interface ImageGenerationParams {
   prompt: string;
   width?: number;
   height?: number;
+  inputImageUrl?: string;
 }
 
 function generateImageUrl(params: ImageGenerationParams): string {
   const {
     prompt,
     width = 1080,
-    height = 1920
+    height = 1920,
+    inputImageUrl
   } = params;
-  
+
   const encodedPrompt = encodeURIComponent(prompt);
   const hardcodedToken = "Cf5zT0TTvLLEskfY";
-  
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=false&nologo=true&model=nanobanana&token=${hardcodedToken}`;
+
+  let url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=nanobanana&token=${hardcodedToken}`;
+
+  if (inputImageUrl) {
+    url += `&image=${encodeURIComponent(inputImageUrl)}`;
+  }
+
+  return url;
 }
 
 function createImageMarkdown(params: ImageGenerationParams): string {
@@ -678,8 +686,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { messages, persona = 'default', imageData, audioData, heatLevel = 2, stream = false } = req.body;
-    
+    const { messages, persona = 'default', imageData, audioData, heatLevel = 2, stream = false, inputImageUrls } = req.body;
+
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages format' });
     }
@@ -885,6 +893,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     if (toolCall.function?.name === 'generate_image') {
                       try {
                         const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
+
+                        if (inputImageUrls && inputImageUrls.length > 0) {
+                          params.inputImageUrl = inputImageUrls[0];
+                        }
+
                         const imageMarkdown = createImageMarkdown(params);
                         res.write(`\n\n${imageMarkdown}`);
                         fullContent += `\n\n${imageMarkdown}`;
@@ -985,6 +998,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (toolCall.function?.name === 'generate_image') {
             try {
               const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
+
+              if (inputImageUrls && inputImageUrls.length > 0) {
+                params.inputImageUrl = inputImageUrls[0];
+              }
+
               const imageMarkdown = createImageMarkdown(params);
               fullContent += `\n\n${imageMarkdown}`;
             } catch (error) {
