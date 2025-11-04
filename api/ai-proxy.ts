@@ -487,16 +487,16 @@ const imageGenerationTool = {
         width: {
           type: "integer",
           description: "Width of the image in pixels",
-          default: 1080,
-          minimum: 1080,
-          maximum: 2048
+          default: 2160,
+          minimum: 2160,
+          maximum: 3840
         },
         height: {
           type: "integer", 
           description: "Height of the image in pixels",
-          default: 1920,
-          minimum: 1080,
-          maximum: 2048
+          default: 3840,
+          minimum: 2160,
+          maximum: 3840
         }
       },
       required: ["prompt"]
@@ -530,8 +530,8 @@ interface ImageGenerationParams {
 function generateImageUrl(params: ImageGenerationParams): string {
   const {
     prompt,
-    width = 1080,
-    height = 1920,
+    width = 2160,
+    height = 3840,
     inputImageUrl
   } = params;
 
