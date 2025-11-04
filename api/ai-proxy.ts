@@ -536,9 +536,9 @@ function generateImageUrl(params: ImageGenerationParams): string {
   } = params;
 
   const encodedPrompt = encodeURIComponent(prompt);
-  const hardcodedToken = "Cf5zT0TTvLLEskfY";
+  const hardcodedToken = "plln_pk_ThHbWMzLQTy51PiNODHYb29rKcvulks6ZafYfvZBKKaaHnt26ItIBWNjJC1fWWrs";
 
-  let url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=kontext&token=${hardcodedToken}`;
+  let url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=nanobanana&token=${hardcodedToken}`;
 
   if (inputImageUrl) {
     url += `&image=${encodeURIComponent(inputImageUrl)}`;
