@@ -103,8 +103,8 @@ export function AIMessage({
   // Handle image generation detection
   useEffect(() => {
     // Check if we have a complete image link
-    if (content.includes('![Image](https://image.pollinations.ai/')) {
-      const imageRegex = /!\[Image\]\(https:\/\/image\.pollinations\.ai\/prompt\/[^)]+\)/g;
+    if (content.includes('![Image](https://enter.pollinations.ai/')) {
+      const imageRegex = /!\[Image\]\(https:\/\/enter\.pollinations\.ai\/api\/generate\/image\/[^)]+\)/g;
       const matches = content.match(imageRegex);
       
       if (matches) {
@@ -177,7 +177,7 @@ export function AIMessage({
     ),
     img: ({ src, alt }: { src?: string; alt?: string }) => {
       // Check if this is a Pollinations.ai generated image
-      if (src && src.includes('image.pollinations.ai')) {
+      if (src && src.includes('enter.pollinations.ai')) {
         return <GeneratedImage src={src} alt={alt || 'Generated image'} />;
       }
       
