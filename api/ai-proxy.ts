@@ -522,6 +522,7 @@ Your responses should be optimized for a quick, back-and-forth voice conversatio
 
 interface ImageGenerationParams {
   prompt: string;
+  orientation?: 'portrait' | 'landscape';
   width?: number;
   height?: number;
   inputImageUrl?: string;
@@ -530,10 +531,21 @@ interface ImageGenerationParams {
 function generateImageUrl(params: ImageGenerationParams): string {
   const {
     prompt,
-    width = 2160,
-    height = 3840,
+    orientation = 'portrait',
     inputImageUrl
   } = params;
+
+  // Set dimensions based on orientation
+  let width: number;
+  let height: number;
+
+  if (orientation === 'landscape') {
+    width = 3840;
+    height = 2160;
+  } else {
+    width = 2160;
+    height = 3840;
+  }
 
   const encodedPrompt = encodeURIComponent(prompt);
   const hardcodedToken = "plln_pk_ThHbWMzLQTy51PiNODHYb29rKcvulks6ZafYfvZBKKaaHnt26ItIBWNjJC1fWWrs";
