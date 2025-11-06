@@ -484,19 +484,11 @@ const imageGenerationTool = {
           type: "string",
           description: "Description of the image to generate. Use fully detailed prompt. Look carefully if the user mentions small details like adding text and style etc. And add more details like dreamy effects etc to make the image look aesthetically pleasing."
         },
-        width: {
-          type: "integer",
-          description: "Width of the image in pixels",
-          default: 2160,
-          minimum: 2160,
-          maximum: 3840
-        },
-        height: {
-          type: "integer", 
-          description: "Height of the image in pixels",
-          default: 3840,
-          minimum: 2160,
-          maximum: 3840
+        orientation: {
+          type: "string",
+          description: "Orientation of the image. Choose either 'portrait' (vertical) or 'landscape' (horizontal). Portrait is 2160x3840, landscape is 3840x2160.",
+          enum: ["portrait", "landscape"],
+          default: "portrait"
         }
       },
       required: ["prompt"]
@@ -523,8 +515,6 @@ Your responses should be optimized for a quick, back-and-forth voice conversatio
 interface ImageGenerationParams {
   prompt: string;
   orientation?: 'portrait' | 'landscape';
-  width?: number;
-  height?: number;
   inputImageUrl?: string;
 }
 
@@ -536,16 +526,8 @@ function generateImageUrl(params: ImageGenerationParams): string {
   } = params;
 
   // Set dimensions based on orientation
-  let width: number;
-  let height: number;
-
-  if (orientation === 'landscape') {
-    width = 3840;
-    height = 2160;
-  } else {
-    width = 2160;
-    height = 3840;
-  }
+  const width = orientation === 'landscape' ? 3840 : 2160;
+  const height = orientation === 'landscape' ? 2160 : 3840;
 
   const encodedPrompt = encodeURIComponent(prompt);
   const hardcodedToken = "plln_pk_ThHbWMzLQTy51PiNODHYb29rKcvulks6ZafYfvZBKKaaHnt26ItIBWNjJC1fWWrs";
