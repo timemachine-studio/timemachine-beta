@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const AI_PERSONAS = {
   default: {
     name: 'TimeMachine Air',
-    model: 'openai/gpt-oss-120b',
+    model: 'openai/gpt-oss-20b',
     temperature: 0.9,
     maxTokens: 2000,
     systemPrompt: `## Core Identity
@@ -588,7 +588,7 @@ function incrementRateLimit(ip: string, persona: keyof typeof AI_PERSONAS): void
   }
 }
 
-// Streaming function for Air persona (gpt-oss-120b) - GROQ API
+// Streaming function for Air persona - GROQ API
 async function callGroqAirAPIStreaming(
   messages: any[],
   tools?: any[]
@@ -600,7 +600,7 @@ async function callGroqAirAPIStreaming(
   }
 
   const requestBody: any = {
-    model: "openai/gpt-oss-120b",
+    model: "openai/gpt-oss-20b",
     messages,
     temperature: 0.9,
     max_completion_tokens: 2000,
