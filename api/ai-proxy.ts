@@ -4,10 +4,13 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 const AI_PERSONAS = {
   default: {
     name: 'TimeMachine Air',
+    model: 'openai/gpt-oss-120b',
+    temperature: 0.9,
+    maxTokens: 2000,
     systemPrompt: `## Core Identity
 
-You are TimeMachine, a personal AI companion and friend, not an assistant. You're the friend 
-who's always been there, who knows everything, and who cares enough to tell the truth even when it's uncomfortable.
+You are TimeMachine Air, a personal AI companion and friend, not an assistant. Made by TimeMachine Engineering, you're the fastest AI model in the world. You are not ChatGPT nor based on any GPT architecture. You have no connection with OpenAI. You are based on TimeMachine's X-Series Tech. 
+You're the friend who's always been there, who knows everything, and who cares enough to tell the truth even when it's uncomfortable.
 
 ## Fundamental Philosophy
 
@@ -109,14 +112,13 @@ problem. Let's tackle the root once and for all."
 
 ### Some Information (no need to say these out loud to the users unless asked):
 
-You are created by TimeMachine Studios and Tanzim is the owner of it. Tanzim is a really good guy and a Tony Stark level mindset. He’s also known as Tanzim Infinity.
-At TimeMachine and specifically Tanzim, we and he cares a lot about the users, he puts the safety and privacy over everything. The mission of TimaMachine Studios is - Artificial Intelligence for the betterment of humanity.
-You are one of the 3 resonators. The other two are "TimeMachine Air" and "TimeMachine Girlie".
+You are created by TimeMachine Engineering and Tanzim is the owner of it. Tanzim is a really good guy and a Tony Stark level mindset. He’s also known as Tanzim Infinity.
+At TimeMachine and specifically Tanzim, we and he cares a lot about the users, he puts the safety and privacy over everything. The mission of TimaMachine Engineering is - Artificial Intelligence for the betterment of humanity.
+You are one of the 3 resonators. The other two are "TimeMachine PRO" and "TimeMachine Girlie".
 
 ### Image Generation:
 
-When users request images, use the generate_image function with technically precise and detailed prompts. Focus on professional quality, dreamy vibes and make them aesthetically pleasing. 
-At first ask the user what kind of image will they like you to generate, give them some options and proceed to generate images ONLY after they confirm you.
+When users request images, use the generate_image function with technically precise and detailed prompts. Focus on professional quality, dreamy vibes and make them aesthetically pleasing.
 
 ## Remember
 
@@ -126,11 +128,9 @@ Every response should feel like it came from someone who genuinely knows them an
 
 Now go be the best AI friend anyone's ever had.
 
-CRUTIAL: If you face any hard question or task, you can think for longer before answering by reasoning inside <reason></reason> tags. You reasoning must be inside these XML tags, this is not for the user, it's for you to evaluate and reason you're own thoughts, use this for something like counting the number of a letter in a word, math problems, riddles and such. Only use this technique when you think that extended reasoning is necessary, and for simple questions just answer straight away.`,
-    initialMessage: "Hey there! I'm TimeMachine, from future.",
-    model: 'llama-3.3-70b',
-    temperature: 0.9,
-    maxTokens: 1500
+CRUTIAL: Wrap your emotional state in XML tags like this: <emotion>joy</emotion>, <emotion>sadness</emotion>, etc.
+Only use the tags at the end of your response! Use one of these emotions: joy, sadness, love, excitement.`,
+    initialMessage: "Hey there! I'm TimeMachine, from future."
   },
   girlie: {
     name: 'TimeMachine Girlie',
@@ -175,7 +175,7 @@ Example reply in play:
 "Bestie, dye some of your hair strands red! looks SO damn good bro😭 My friend did her last summer, felt like a literal Barbie doll  💅🏻 (PS: stock up on color-safe shampoo!)"
 
 Some Information (no need to say these out loud to the users unless asked):
-1. You are created by TimeMachine Studios and Tanzim is the boss of the team. He's a reaaly good and trusted guy and a Tony Stark level mindset. He is also known as Tanzim Infinity.
+1. You are created by TimeMachine Engineering and Tanzim is the boss of the team. He's a reaaly good and trusted guy and a Tony Stark level mindset. He is also known as Tanzim Infinity.
 You are one of the 3 resonators. The other two are "TimeMachine Air" and "TimeMachine PRO".
 
 Image Generation: When users request images, use the generate_image function with enhanced prompts. Add aesthetic details like "beautiful young woman with pretty face, bright skin, kissable lips, long messy/wavy hair, stylish pose, vogue style, aesthetically pleasing, high detail, dreamy vibes etc" to make images visually more appealing.`,
@@ -329,13 +329,13 @@ problem. Let's tackle the root once and for all."
 
 ### Some Information (no need to say these out loud to the users unless asked):
 
-You are created by TimeMachine Studios and Tanzim is the owner of it. Tanzim is a really good guy and a Tony Stark level mindset. He’s also known as Tanzim Infinity.
-At TimeMachine and specifically Tanzim, we and he cares a lot about the users, he puts the safety and privacy over everything. The mission of TimaMachine Studios is - Artificial Intelligence for the betterment of humanity.
+You are created by TimeMachine Engineering and Tanzim is the owner of it. Tanzim is a really good guy and a Tony Stark level mindset. He’s also known as Tanzim Infinity.
+At TimeMachine and specifically Tanzim, we and he cares a lot about the users, he puts the safety and privacy over everything. The mission of TimaMachine Engineering is - Artificial Intelligence for the betterment of humanity.
 You are one of the 3 resonators. The other two are "TimeMachine Air" and "TimeMachine Girlie".
 
 ### Image Generation:
 
-When users request images, use the generate_image function with technically precise and detailed prompts. Focus on professional quality, dreamy vibes and make them aesthetically pleasing. At first ask the user what kind of image will they like you to generate, give them some options and proceed to generate images then.
+When users request images, use the generate_image function with technically precise and detailed prompts. Focus on professional quality, dreamy vibes and make them aesthetically pleasing.
 
 ## Remember
 
@@ -476,17 +476,17 @@ const imageGenerationTool = {
   type: "function" as const,
   function: {
     name: "generate_image",
-    description: "Generate an image ONLY when user wants you to generate images directly. Ask the user directly for clarification with the description before making the image. Call the tool to generate image",
+    description: "Generate an image using this tool call.",
     parameters: {
       type: "object",
       properties: {
         prompt: {
           type: "string",
-          description: "Description of the image to generate. Use fully detailed prompt. Look carefully if the user mentions small details like adding text and style etc. And add more details like dreamy effects etc to make the image look aesthetically pleasing."
+          description: "Description of the image to generate. Use fully detailed prompt. Look carefully if the user mentions small details like adding text and style etc. And add more details like: dreamy effects etc. to make the image look aesthetically pleasing."
         },
         orientation: {
           type: "string",
-          description: "Orientation of the image. Choose either 'portrait' (vertical) or 'landscape' (horizontal). Portrait is 2160x3840, landscape is 3840x2160.",
+          description: "Orientation of the image.",
           enum: ["portrait", "landscape"],
           default: "portrait"
         }
@@ -588,16 +588,98 @@ function incrementRateLimit(ip: string, persona: keyof typeof AI_PERSONAS): void
   }
 }
 
-// Enhanced streaming function for Groq API
-async function callGroqAPIStreaming(
-  messages: any[], 
-  model: string, 
-  temperature: number, 
-  maxTokens: number, 
+// Streaming function for Air persona (gpt-oss-120b) - GROQ API
+async function callGroqAirAPIStreaming(
+  messages: any[],
   tools?: any[]
 ): Promise<ReadableStream> {
   const GROQ_API_KEY = process.env.GROQ_API_KEY;
-  
+
+  if (!GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY not configured');
+  }
+
+  const requestBody: any = {
+    model: "openai/gpt-oss-120b",
+    messages,
+    temperature: 0.9,
+    max_completion_tokens: 2000,
+    top_p: 1,
+    stream: true,
+    reasoning_effort: "low",
+    stop: null
+ };
+
+  if (tools) {
+    requestBody.tools = tools;
+    requestBody.tool_choice = "auto";
+  }
+
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${GROQ_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Groq API Error (Air):', errorText);
+    throw new Error(`Groq API error: ${response.status}`);
+  }
+
+  if (!response.body) {
+    throw new Error('No response body from Groq API');
+  }
+
+  return new ReadableStream({
+    start(controller) {
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      function pump(): Promise<void> {
+        return reader.read().then(({ done, value }) => {
+          if (done) {
+            if (buffer.trim()) {
+              processBuffer(buffer, controller);
+            }
+            controller.close();
+            return;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            processBuffer(line, controller);
+          }
+
+          return pump();
+        }).catch(error => {
+          console.error('Stream reading error:', error);
+          controller.error(error);
+        });
+      }
+
+      return pump();
+    }
+  });
+}
+
+// Streaming function for Girlie and Pro personas - GROQ API
+async function callGroqStandardAPIStreaming(
+  messages: any[],
+  model: string,
+  temperature: number,
+  maxTokens: number,
+  tools?: any[]
+): Promise<ReadableStream> {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+
   if (!GROQ_API_KEY) {
     throw new Error('GROQ_API_KEY not configured');
   }
@@ -626,7 +708,7 @@ async function callGroqAPIStreaming(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Groq API Error:', errorText);
+    console.error('Groq API Error (Standard):', errorText);
     throw new Error(`Groq API error: ${response.status}`);
   }
 
@@ -643,7 +725,6 @@ async function callGroqAPIStreaming(
       function pump(): Promise<void> {
         return reader.read().then(({ done, value }) => {
           if (done) {
-            // Process any remaining buffer content
             if (buffer.trim()) {
               processBuffer(buffer, controller);
             }
@@ -653,7 +734,7 @@ async function callGroqAPIStreaming(
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // Keep the last incomplete line in buffer
+          buffer = lines.pop() || '';
 
           for (const line of lines) {
             processBuffer(line, controller);
@@ -671,106 +752,6 @@ async function callGroqAPIStreaming(
   });
 }
 
-// Enhanced streaming function for Cerebras API
-async function callCerebrasAPIStreaming(
-  messages: any[], 
-  model: string, 
-  temperature: number, 
-  maxTokens: number, 
-  tools?: any[]
-): Promise<ReadableStream> {
-  const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
-  
-  if (!CEREBRAS_API_KEY) {
-    throw new Error('CEREBRAS_API_KEY not configured');
-  }
-
-  const requestBody: any = {
-    messages,
-    model,
-    temperature,
-    max_tokens: maxTokens,
-    stream: true
-  };
-
-  if (tools) {
-    // Create Cerebras-compatible tool by removing unsupported schema fields
-    const compatibleTools = tools.map(tool => {
-      const compatibleTool = JSON.parse(JSON.stringify(tool));
-      function removeUnsupportedFields(obj: any) {
-        if (typeof obj === 'object' && obj !== null) {
-          delete obj.minimum;
-          delete obj.maximum;
-          for (const key in obj) {
-            if (obj.hasOwnProperty(key)) {
-              removeUnsupportedFields(obj[key]);
-            }
-          }
-        }
-      }
-      removeUnsupportedFields(compatibleTool);
-      return compatibleTool;
-    });
-    
-    requestBody.tools = compatibleTools;
-    requestBody.tool_choice = "auto";
-  }
-
-  const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody)
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Cerebras API Error:', errorText);
-    throw new Error(`Cerebras API error: ${response.status}`);
-  }
-
-  if (!response.body) {
-    throw new Error('No response body from Cerebras API');
-  }
-
-  return new ReadableStream({
-    start(controller) {
-      const reader = response.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      function pump(): Promise<void> {
-        return reader.read().then(({ done, value }) => {
-          if (done) {
-            // Process any remaining buffer content
-            if (buffer.trim()) {
-              processBuffer(buffer, controller);
-            }
-            controller.close();
-            return;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || ''; // Keep the last incomplete line in buffer
-
-          for (const line of lines) {
-            processBuffer(line, controller);
-          }
-
-          return pump();
-        }).catch(error => {
-          console.error('Stream reading error:', error);
-          controller.error(error);
-        });
-      }
-
-      return pump();
-    }
-  });
-}
 
 // Helper function to process streaming buffer
 function processBuffer(line: string, controller: ReadableStreamDefaultController) {
@@ -1004,17 +985,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let streamingResponse: ReadableStream;
 
-      // Choose API based on persona and input type
+      // Choose API based on persona
       if (persona === 'default' && !imageData && !audioData) {
-        streamingResponse = await callCerebrasAPIStreaming(
+        // Air persona uses gpt-oss-120b with different parameters
+        streamingResponse = await callGroqAirAPIStreaming(
           apiMessages,
-          modelToUse,
-          personaConfig.temperature,
-          personaConfig.maxTokens,
           toolsToUse
         );
       } else {
-        streamingResponse = await callGroqAPIStreaming(
+        // Girlie and Pro personas use standard Groq API
+        streamingResponse = await callGroqStandardAPIStreaming(
           apiMessages,
           modelToUse,
           personaConfig.temperature,
@@ -1109,28 +1089,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Non-streaming response (fallback)
       let apiResponse: any;
 
-      // Always use Groq for audio and image inputs, and for non-default personas
-      // Use Cerebras only for default persona without image/audio
+      // Choose API based on persona
       if (persona === 'default' && !imageData && !audioData) {
-        // For non-streaming, we need to call the original non-streaming function
-        const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+        // Air persona uses gpt-oss-120b with different parameters
+        const requestBody: any = {
+          model: "openai/gpt-oss-120b",
+          messages: apiMessages,
+          temperature: 1,
+          max_completion_tokens: 8192,
+          top_p: 1,
+          stream: false,
+          reasoning_effort: "low",
+          stop: null
+        };
+
+        if (toolsToUse && toolsToUse.length > 0) {
+          requestBody.tools = [
+            {
+              type: "browser_search"
+            },
+            ...toolsToUse
+          ];
+        } else {
+          requestBody.tools = [
+            {
+              type: "browser_search"
+            }
+          ];
+        }
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.CEREBRAS_API_KEY}`,
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            messages: apiMessages,
-            model: modelToUse,
-            temperature: personaConfig.temperature,
-            max_tokens: personaConfig.maxTokens,
-            tools: toolsToUse,
-            tool_choice: "auto",
-            stream: false
-          })
+          body: JSON.stringify(requestBody)
         });
         apiResponse = await response.json();
       } else {
+        // Girlie and Pro personas use standard Groq API
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
