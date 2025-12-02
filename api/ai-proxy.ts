@@ -605,7 +605,7 @@ function generateImageUrl(params: ImageGenerationParams): string {
   const height = orientation === 'landscape' ? 2160 : 3840;
 
   const encodedPrompt = encodeURIComponent(prompt);
-  const hardcodedToken = "plln_sk_y1C1j1ZpmxN0YNB7HNW4cmYG0aQdMbsk";
+  const hardcodedToken = "plln_sk_GnhDxr0seAiz92cgYsAh3VjBGQM8NRLK";
 
   let url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=seedream&key=${hardcodedToken}`;
 
@@ -628,7 +628,7 @@ interface WebSearchParams {
 async function fetchWebSearchResults(params: WebSearchParams): Promise<string> {
   const { query } = params;
   const encodedQuery = encodeURIComponent(query);
-  const hardcodedToken = "plln_sk_y1C1j1ZpmxN0YNB7HNW4cmYG0aQdMbsk";
+  const hardcodedToken = "plln_sk_GnhDxr0seAiz92cgYsAh3VjBGQM8NRLK";
 
   const url = `https://enter.pollinations.ai/api/generate/text/${encodedQuery}?model=gemini-search&key=${hardcodedToken}`;
 
