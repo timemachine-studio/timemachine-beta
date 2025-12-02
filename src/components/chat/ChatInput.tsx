@@ -123,6 +123,9 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((message.trim() || selectedImages.length > 0) && !isLoading && !isUploading) {
+      // Close mention modal when sending message
+      setShowMentionCall(false);
+
       if (selectedImages.length > 0) {
         setIsUploading(true);
         try {
@@ -175,8 +178,12 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
 
     if (newValue.endsWith('@')) {
       setShowMentionCall(true);
-    } else if (showMentionCall && !newValue.includes('@')) {
-      setShowMentionCall(false);
+    } else if (showMentionCall) {
+      // Check if user has completed typing a mention (case-insensitive)
+      const completedMention = newValue.match(/@(chatgpt|gemini|claude|grok)\s/i);
+      if (completedMention || !newValue.includes('@')) {
+        setShowMentionCall(false);
+      }
     }
   };
 

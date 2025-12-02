@@ -201,10 +201,11 @@ export function useChat() {
     let messagePersona = currentPersona;
     let messageContent = content;
 
-    // Check for @persona mentions
-    const mentionMatch = content.match(/^@(girlie|pro)\s+(.+)$/);
+    // Check for @persona mentions (case-insensitive)
+    const mentionMatch = content.match(/^@(chatgpt|gemini|claude|grok|girlie|pro)\s+(.+)$/i);
     if (mentionMatch) {
-      messagePersona = mentionMatch[1] as keyof typeof AI_PERSONAS;
+      const mentionedModel = mentionMatch[1].toLowerCase();
+      messagePersona = mentionedModel as keyof typeof AI_PERSONAS;
       messageContent = mentionMatch[2];
     }
 
@@ -214,7 +215,19 @@ export function useChat() {
       finalContent = '[Audio message]'; // Placeholder text for UI
     }
 
+    // Create user message with original content (including @mention) for display
     const userMessage: Message = {
+      id: Date.now(),
+      content: content, // Keep original content with @mention for display
+      isAI: false,
+      hasAnimated: false,
+      imageData: imageData,
+      audioData: audioData,
+      inputImageUrls: inputImageUrls
+    };
+
+    // Create API message with cleaned content (without @mention) for API call
+    const apiUserMessage: Message = {
       id: Date.now(),
       content: finalContent,
       isAI: false,
@@ -223,7 +236,7 @@ export function useChat() {
       audioData: audioData,
       inputImageUrls: inputImageUrls
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setError(null);
@@ -240,10 +253,13 @@ export function useChat() {
     setMessages(prev => [...prev, aiMessage]);
     setStreamingMessageId(aiMessageId);
 
+    // Filter out initial welcome message (ID: 1) - it's just for UI aesthetics
+    const apiMessages = [...messages, apiUserMessage].filter(msg => msg.id !== 1);
+
     if (useStreaming) {
-      // Use streaming response
+      // Use streaming response - send API messages (without @mention in content and without initial message)
       generateAIResponseStreaming(
-        [...messages, userMessage],
+        apiMessages,
         imageData,
         '', // System prompt is now handled server-side
         messagePersona,
@@ -283,10 +299,10 @@ export function useChat() {
         }
       );
     } else {
-      // Use non-streaming response (fallback)
+      // Use non-streaming response (fallback) - send API messages (without @mention in content and without initial message)
       try {
         const aiResponse = await generateAIResponse(
-          [...messages, userMessage],
+          apiMessages,
           imageData,
           '', // System prompt is now handled server-side
           messagePersona,
