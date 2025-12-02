@@ -605,7 +605,7 @@ function generateImageUrl(params: ImageGenerationParams): string {
   const height = orientation === 'landscape' ? 2160 : 3840;
 
   const encodedPrompt = encodeURIComponent(prompt);
-  const hardcodedToken = "plln_pk_ThHbWMzLQTy51PiNODHYb29rKcvulks6ZafYfvZBKKaaHnt26ItIBWNjJC1fWWrs";
+  const hardcodedToken = "plln_sk_9p1ezHOVsb2XB96WV3tJSYvDvFLpho3i";
 
   let url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=seedream&key=${hardcodedToken}`;
 
