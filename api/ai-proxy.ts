@@ -607,7 +607,7 @@ function generateImageUrl(params: ImageGenerationParams): string {
   const encodedPrompt = encodeURIComponent(prompt);
   const hardcodedToken = "plln_sk_GnhDxr0seAiz92cgYsAh3VjBGQM8NRLK";
 
-  let url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=seedream&key=${hardcodedToken}`;
+  let url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=seedream-pro&key=${hardcodedToken}`;
 
   if (inputImageUrl) {
     url += `&image=${encodeURIComponent(inputImageUrl)}`;
