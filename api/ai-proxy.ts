@@ -528,7 +528,7 @@ const imageGenerationTool = {
   type: "function" as const,
   function: {
     name: "generate_image",
-    description: "Generate an image using this tool call.",
+    description: "Generate or edit an image using this tool call.",
     parameters: {
       type: "object",
       properties: {
@@ -538,9 +538,15 @@ const imageGenerationTool = {
         },
         orientation: {
           type: "string",
-          description: "Orientation of the image.",
+          description: "Orientation of the image. Only used when creating new images, ignored for editing.",
           enum: ["portrait", "landscape"],
           default: "portrait"
+        },
+        process: {
+          type: "string",
+          description: "The type of image process. Use 'create' to generate a new image from scratch. Use 'edit' when the user wants to modify, transform, or edit an existing image they have provided.",
+          enum: ["create", "edit"],
+          default: "create"
         }
       },
       required: ["prompt"]
@@ -590,27 +596,39 @@ const POLLINATIONS_API_URL = 'https://enter.pollinations.ai/api/generate/v1/chat
 interface ImageGenerationParams {
   prompt: string;
   orientation?: 'portrait' | 'landscape';
-  inputImageUrl?: string;
+  process?: 'create' | 'edit';
+  inputImageUrls?: string[];
+  persona?: keyof typeof AI_PERSONAS;
+  imageWidth?: number;
+  imageHeight?: number;
 }
 
 function generateImageUrl(params: ImageGenerationParams): string {
   const {
     prompt,
     orientation = 'portrait',
-    inputImageUrl
+    process = 'create',
+    inputImageUrls,
+    persona = 'default',
+    imageWidth,
+    imageHeight
   } = params;
 
-  // Set dimensions based on orientation
-  const width = orientation === 'landscape' ? 3840 : 2160;
-  const height = orientation === 'landscape' ? 2160 : 3840;
-
+  // Generate a proxy URL that points to our secure image endpoint
+  // The actual Pollinations URL with the secret key is constructed server-side in /api/image
   const encodedPrompt = encodeURIComponent(prompt);
-  const hardcodedToken = "plln_sk_GnhDxr0seAiz92cgYsAh3VjBGQM8NRLK";
 
-  let url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=seedream-pro&key=${hardcodedToken}`;
+  let url = `/api/image?prompt=${encodedPrompt}&orientation=${orientation}&process=${process}&persona=${persona}`;
 
-  if (inputImageUrl) {
-    url += `&image=${encodeURIComponent(inputImageUrl)}`;
+  // For edit process, include the original image dimensions if available
+  if (process === 'edit' && imageWidth && imageHeight) {
+    url += `&width=${imageWidth}&height=${imageHeight}`;
+  }
+
+  // Handle multiple reference images (up to 4)
+  if (inputImageUrls && inputImageUrls.length > 0) {
+    const imageUrls = inputImageUrls.slice(0, 4).map(encodeURIComponent).join(',');
+    url += `&inputImageUrls=${imageUrls}`;
   }
 
   return url;
@@ -1068,7 +1086,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { messages, persona = 'default', imageData, audioData, heatLevel = 2, stream = false, inputImageUrls } = req.body;
+    const { messages, persona = 'default', imageData, audioData, heatLevel = 2, stream = false, inputImageUrls, imageDimensions } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages format' });
@@ -1296,8 +1314,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
 
                         if (inputImageUrls && inputImageUrls.length > 0) {
-                          params.inputImageUrl = inputImageUrls[0];
+                          params.inputImageUrls = inputImageUrls;
                         }
+
+                        // Pass original image dimensions for edit operations
+                        if (imageDimensions) {
+                          params.imageWidth = imageDimensions.width;
+                          params.imageHeight = imageDimensions.height;
+                        }
+
+                        params.persona = persona;
 
                         const imageMarkdown = createImageMarkdown(params);
                         res.write(`\n\n${imageMarkdown}`);
@@ -1447,8 +1473,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               const params: ImageGenerationParams = JSON.parse(toolCall.function.arguments);
 
               if (inputImageUrls && inputImageUrls.length > 0) {
-                params.inputImageUrl = inputImageUrls[0];
+                params.inputImageUrls = inputImageUrls;
               }
+
+              // Pass original image dimensions for edit operations
+              if (imageDimensions) {
+                params.imageWidth = imageDimensions.width;
+                params.imageHeight = imageDimensions.height;
+              }
+
+              params.persona = persona;
 
               const imageMarkdown = createImageMarkdown(params);
               fullContent += `\n\n${imageMarkdown}`;

@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Plus } from 'lucide-react';
 import { VoiceRecorder } from './VoiceRecorder';
-import { ChatInputProps } from '../../types/chat';
+import { ChatInputProps, ImageDimensions } from '../../types/chat';
 import { LoadingSpinner } from '../loading/LoadingSpinner';
 import { ImagePreview } from './ImagePreview';
 import { AI_PERSONAS } from '../../config/constants';
@@ -47,6 +47,23 @@ const convertImageToBase64 = (file: File): Promise<string> => {
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
+  });
+};
+
+// Get image dimensions from a File
+const getImageDimensions = (file: File): Promise<ImageDimensions> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
+    img.src = url;
   });
 };
 
@@ -129,6 +146,9 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
       if (selectedImages.length > 0) {
         setIsUploading(true);
         try {
+          // Get dimensions of the first image (for edit operations)
+          const firstImageDimensions = await getImageDimensions(selectedImages[0]);
+
           const base64Images = await Promise.all(selectedImages.map(convertImageToBase64));
 
           const uploadResults = await Promise.all(
@@ -146,7 +166,7 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
           const publicUrls = successfulUploads.map(result => result.url);
           setUploadedImageUrls(publicUrls);
 
-          await onSendMessage(message, base64Images, undefined, publicUrls);
+          await onSendMessage(message, base64Images, undefined, publicUrls, firstImageDimensions);
           setSelectedImages([]);
           setImagePreviewUrls([]);
           setUploadedImageUrls([]);
@@ -201,8 +221,8 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length > 3) {
-      alert('You can upload a maximum of 3 images.');
+    if (files.length > 4) {
+      alert('You can upload a maximum of 4 images.');
       return;
     }
     const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -226,8 +246,8 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
     if (!isDesktop) return;
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 3) {
-      alert('You can upload a maximum of 3 images.');
+    if (files.length > 4) {
+      alert('You can upload a maximum of 4 images.');
       return;
     }
     const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -295,7 +315,7 @@ export function ChatInput({ onSendMessage, isLoading, currentPersona = 'default'
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading || isUploading || selectedImages.length >= 3}
+            disabled={isLoading || isUploading || selectedImages.length >= 4}
             className={`p-3 rounded-full
               bg-gradient-to-r ${personaStyles.borderColors[currentPersona]}
               backdrop-blur-xl ${theme.text}

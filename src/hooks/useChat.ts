@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Message } from '../types/chat';
+import { Message, ImageDimensions } from '../types/chat';
 import { generateAIResponse, generateAIResponseStreaming } from '../services/ai/aiProxyService';
 import { INITIAL_MESSAGE, AI_PERSONAS } from '../config/constants';
 
@@ -64,8 +64,19 @@ export function useChat() {
       } else {
         // Create new session
         const firstUserMessage = messagesToSave.find(msg => !msg.isAI);
-        const sessionName = firstUserMessage ? firstUserMessage.content.slice(0, 50) : 'New Chat';
-        
+        let sessionName = 'New Chat';
+
+        if (firstUserMessage) {
+          // Use content if available, otherwise check for image or audio
+          if (firstUserMessage.content && firstUserMessage.content.trim() && firstUserMessage.content !== '[Image message]' && firstUserMessage.content !== '[Audio message]') {
+            sessionName = firstUserMessage.content.slice(0, 50);
+          } else if (firstUserMessage.imageData || (firstUserMessage.inputImageUrls && firstUserMessage.inputImageUrls.length > 0)) {
+            sessionName = 'Image message';
+          } else if (firstUserMessage.audioData) {
+            sessionName = 'Audio message';
+          }
+        }
+
         const newSession: ChatSession = {
           id: sessionId,
           name: sessionName,
@@ -76,7 +87,7 @@ export function useChat() {
         };
         chatSessions.push(newSession);
       }
-      
+
       localStorage.setItem('chatSessions', JSON.stringify(chatSessions));
     } catch (error) {
       console.error('Failed to save chat session:', error);
@@ -197,7 +208,7 @@ export function useChat() {
     }
   }, [currentSessionId]);
 
-  const handleSendMessage = useCallback(async (content: string, imageData?: string | string[], audioData?: string, inputImageUrls?: string[]) => {
+  const handleSendMessage = useCallback(async (content: string, imageData?: string | string[], audioData?: string, inputImageUrls?: string[], imageDimensions?: ImageDimensions) => {
     let messagePersona = currentPersona;
     let messageContent = content;
 
@@ -209,21 +220,26 @@ export function useChat() {
       messageContent = mentionMatch[2];
     }
 
-    // Handle audio data - if we have audio but no text content, create a message indicating audio input
+    // Handle audio/image data - if we have audio/images but no text content, create a message indicating the input type
     let finalContent = messageContent;
     if (audioData && !messageContent.trim()) {
       finalContent = '[Audio message]'; // Placeholder text for UI
+    } else if ((imageData || (inputImageUrls && inputImageUrls.length > 0)) && !messageContent.trim()) {
+      finalContent = '[Image message]'; // Placeholder text for UI
     }
 
-    // Create user message with original content (including @mention) for display
+    // Create user message with content for display
+    // Use finalContent if it's a placeholder for image/audio-only messages, otherwise keep original content
+    const displayContent = (finalContent === '[Image message]' || finalContent === '[Audio message]') ? finalContent : content;
     const userMessage: Message = {
       id: Date.now(),
-      content: content, // Keep original content with @mention for display
+      content: displayContent, // Use placeholder for image/audio-only, otherwise original content
       isAI: false,
       hasAnimated: false,
       imageData: imageData,
       audioData: audioData,
-      inputImageUrls: inputImageUrls
+      inputImageUrls: inputImageUrls,
+      imageDimensions: imageDimensions
     };
 
     // Create API message with cleaned content (without @mention) for API call
@@ -234,7 +250,8 @@ export function useChat() {
       hasAnimated: false,
       imageData: imageData,
       audioData: audioData,
-      inputImageUrls: inputImageUrls
+      inputImageUrls: inputImageUrls,
+      imageDimensions: imageDimensions
     };
 
     setMessages(prev => [...prev, userMessage]);
@@ -266,6 +283,7 @@ export function useChat() {
         audioData,
         messagePersona === 'pro' ? currentProHeatLevel : undefined,
         inputImageUrls,
+        imageDimensions,
         // onChunk callback
         (chunk: string) => {
           updateStreamingMessage(aiMessageId, chunk, true);
@@ -308,7 +326,8 @@ export function useChat() {
           messagePersona,
           audioData,
           messagePersona === 'pro' ? currentProHeatLevel : undefined,
-          inputImageUrls
+          inputImageUrls,
+          imageDimensions
         );
         
         const emotion = extractEmotion(aiResponse.content);
