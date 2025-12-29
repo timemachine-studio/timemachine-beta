@@ -573,6 +573,25 @@ const webSearchTool = {
   }
 };
 
+// YouTube Music search tool configuration
+const youtubeMusicTool = {
+  type: "function" as const,
+  function: {
+    name: "play_youtube_music",
+    description: "Search for and play a music track from YouTube Music. Use this when the user asks to play a song, music, artist, or wants to listen to something. This tool searches YouTube for music content and returns a playable video.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "The name of the song, artist, or music to search for. Be specific with song titles and artist names for better results."
+        }
+      },
+      required: ["query"]
+    }
+  }
+};
+
 // Audio-specific system prompt for voice message interactions
 const AUDIO_SYSTEM_PROMPT = `You are TimeMachine Voice Assistant, a specialized AI designed to process and respond to voice messages. Your primary goal is to understand the user's spoken intent, provide concise and helpful responses, and maintain a natural, conversational flow.
 
@@ -659,6 +678,102 @@ async function fetchWebSearchResults(params: WebSearchParams): Promise<string> {
     return text;
   } catch (error) {
     console.error('Web search error:', error);
+    throw error;
+  }
+}
+
+// YouTube Music search params
+interface YouTubeMusicParams {
+  query: string;
+}
+
+interface YouTubeMusicResult {
+  videoId: string;
+  title: string;
+  artist: string;
+  thumbnail: string;
+}
+
+// YouTube Music search function using YouTube Data API v3
+const YOUTUBE_API_KEY = 'AIzaSyD3E75yZWjl7p2_bsZq3mzBwAaaFG3uwbQ';
+
+async function searchYouTubeMusic(params: YouTubeMusicParams): Promise<YouTubeMusicResult | null> {
+  const { query } = params;
+
+  // Add "music" or "audio" to query for better music results
+  const musicQuery = query.toLowerCase().includes('music') || query.toLowerCase().includes('song')
+    ? query
+    : `${query} music`;
+
+  const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+  searchUrl.searchParams.set('part', 'snippet');
+  searchUrl.searchParams.set('q', musicQuery);
+  searchUrl.searchParams.set('type', 'video');
+  searchUrl.searchParams.set('videoCategoryId', '10'); // Music category
+  searchUrl.searchParams.set('maxResults', '5'); // Get more results to find a good match
+  searchUrl.searchParams.set('key', YOUTUBE_API_KEY);
+
+  console.log('YouTube Music search URL:', searchUrl.toString().replace(YOUTUBE_API_KEY, 'REDACTED'));
+
+  try {
+    const response = await fetch(searchUrl.toString());
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      console.error('YouTube API error response:', responseText);
+
+      // Try fallback search without videoCategoryId
+      console.log('Trying fallback search without music category filter...');
+      const fallbackUrl = new URL('https://www.googleapis.com/youtube/v3/search');
+      fallbackUrl.searchParams.set('part', 'snippet');
+      fallbackUrl.searchParams.set('q', `${query} official audio`);
+      fallbackUrl.searchParams.set('type', 'video');
+      fallbackUrl.searchParams.set('maxResults', '1');
+      fallbackUrl.searchParams.set('key', YOUTUBE_API_KEY);
+
+      const fallbackResponse = await fetch(fallbackUrl.toString());
+      if (!fallbackResponse.ok) {
+        throw new Error(`YouTube API failed: ${response.status}`);
+      }
+
+      const fallbackData = await fallbackResponse.json();
+      if (fallbackData.items && fallbackData.items.length > 0) {
+        const item = fallbackData.items[0];
+        return {
+          videoId: item.id.videoId,
+          title: item.snippet.title,
+          artist: item.snippet.channelTitle,
+          thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || ''
+        };
+      }
+
+      throw new Error(`YouTube API failed: ${response.status}`);
+    }
+
+    const data = JSON.parse(responseText);
+    console.log('YouTube API response items count:', data.items?.length || 0);
+
+    if (data.items && data.items.length > 0) {
+      const item = data.items[0];
+      const videoId = item.id.videoId;
+      const title = item.snippet.title;
+      const channelTitle = item.snippet.channelTitle;
+      const thumbnail = item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '';
+
+      console.log('Found YouTube video:', { videoId, title, artist: channelTitle });
+
+      return {
+        videoId,
+        title,
+        artist: channelTitle,
+        thumbnail
+      };
+    }
+
+    console.log('No YouTube results found for query:', query);
+    return null;
+  } catch (error) {
+    console.error('YouTube Music search error:', error);
     throw error;
   }
 }
@@ -1127,7 +1242,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Initialize model, system prompt, and tools with defaults
     let modelToUse = personaConfig.model;
     let systemPromptToUse = enhancedSystemPrompt;
-    let toolsToUse: any[] = [imageGenerationTool, webSearchTool];
+    let toolsToUse: any[] = [imageGenerationTool, webSearchTool, youtubeMusicTool];
 
     // Handle audio transcription if audioData is provided
     let processedMessages = [...messages];
@@ -1352,6 +1467,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                       } catch (error) {
                         console.error('Error processing web search:', error);
                         const errorMsg = '\n\nSorry, I had trouble performing that web search. Please try again.';
+                        res.write(errorMsg);
+                        fullContent += errorMsg;
+                      }
+                    } else if (toolCall.function?.name === 'play_youtube_music') {
+                      try {
+                        const params: YouTubeMusicParams = JSON.parse(toolCall.function.arguments);
+
+                        // Show loading state
+                        const loadingMsg = '\n\n*Searching for music...*';
+                        res.write(loadingMsg);
+
+                        // Search for the music
+                        const musicResult = await searchYouTubeMusic(params);
+
+                        if (musicResult) {
+                          // Create a special marker that frontend can parse to trigger the YouTube player
+                          const musicMsg = `\n\n[YOUTUBE_MUSIC]${JSON.stringify(musicResult)}[/YOUTUBE_MUSIC]\n\n🎵 Now playing: **${musicResult.title}**`;
+                          res.write(musicMsg);
+                          fullContent += musicMsg;
+                        } else {
+                          const notFoundMsg = `\n\nSorry, I couldn't find any music matching "${params.query}". Please try a different search.`;
+                          res.write(notFoundMsg);
+                          fullContent += notFoundMsg;
+                        }
+                      } catch (error) {
+                        console.error('Error processing YouTube music search:', error);
+                        const errorMsg = '\n\nSorry, I had trouble searching for that music. Please try again.';
                         res.write(errorMsg);
                         fullContent += errorMsg;
                       }
