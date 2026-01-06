@@ -609,7 +609,7 @@ Avoid:
 Your responses should be optimized for a quick, back-and-forth voice conversation experience.`;
 
 // Pollinations API configuration
-const POLLINATIONS_API_KEY = 'plln_pk_jCIIjFYkfyAWJtyxOOQuUawdMvuSgskZ';
+const POLLINATIONS_API_KEY = 'sk_vpBUJtPYIF06HER6NKDxIh2aF6RV8kmq';
 const POLLINATIONS_API_URL = 'https://enter.pollinations.ai/api/generate/v1/chat/completions';
 
 interface ImageGenerationParams {
@@ -665,7 +665,7 @@ interface WebSearchParams {
 async function fetchWebSearchResults(params: WebSearchParams): Promise<string> {
   const { query } = params;
   const encodedQuery = encodeURIComponent(query);
-  const hardcodedToken = "plln_sk_GnhDxr0seAiz92cgYsAh3VjBGQM8NRLK";
+  const hardcodedToken = "sk_vpBUJtPYIF06HER6NKDxIh2aF6RV8kmq";
 
   const url = `https://enter.pollinations.ai/api/generate/text/${encodedQuery}?model=gemini-search&key=${hardcodedToken}`;
 
@@ -784,10 +784,10 @@ const PERSONA_LIMITS = {
   girlie: parseInt(process.env.VITE_GIRLIE_PERSONA_LIMIT || '50'),
   pro: parseInt(process.env.VITE_PRO_PERSONA_LIMIT || '30'),
   // External AIs have higher limits since they use their own APIs
-  chatgpt: 1000,
-  gemini: 1000,
-  claude: 1000,
-  grok: 1000
+  chatgpt: 50,
+  gemini: 50,
+  claude: 50,
+  grok: 50
 };
 
 // Rate limiting storage (in production, use a database)
