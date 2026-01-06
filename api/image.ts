@@ -44,7 +44,7 @@ function constructPollinationsUrl(params: ImageParams): string {
   if (process === 'edit') {
     // For edit process: use original image dimensions if provided
     if (originalWidth && originalHeight) {
-      url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${originalWidth}&height=${originalHeight}&enhance=false&private=true&nologo=true&model=${model}&key=${POLLINATIONS_API_KEY}`;
+      url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${originalWidth}&height=${originalHeight}&enhance=false&private=true&nologo=true&model=${model}&seed=-1&key=${POLLINATIONS_API_KEY}`;
     } else {
       // Fallback: no dimensions for edit if not provided
       url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?enhance=false&private=true&nologo=true&model=${model}&key=${POLLINATIONS_API_KEY}`;
@@ -53,7 +53,7 @@ function constructPollinationsUrl(params: ImageParams): string {
     // For create process: include width/height based on orientation
     const width = orientation === 'landscape' ? 3840 : 2160;
     const height = orientation === 'landscape' ? 2160 : 3840;
-    url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=${model}&key=${POLLINATIONS_API_KEY}`;
+    url = `https://enter.pollinations.ai/api/generate/image/${encodedPrompt}?width=${width}&height=${height}&enhance=false&private=true&nologo=true&model=${model}&seed=-1&key=${POLLINATIONS_API_KEY}`;
   }
 
   // Handle multiple reference images (up to 4)
