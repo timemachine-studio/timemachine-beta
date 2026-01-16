@@ -1,16 +1,267 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeMachine Chat - Now in Production</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap" rel="stylesheet">
-    <title>TimeMachine</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --lime: #c8f542;
+            --dark: #0a0a0a;
+            --light: #f8f8f8;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* Background decorative text */
+        .bg-text {
+            position: absolute;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(180px, 25vw, 400px);
+            font-weight: 700;
+            color: var(--lime);
+            text-transform: lowercase;
+            white-space: nowrap;
+            user-select: none;
+            pointer-events: none;
+            z-index: 1;
+            letter-spacing: -0.04em;
+        }
+
+        .bg-text.top {
+            top: -5%;
+            left: -5%;
+        }
+
+        .bg-text.bottom {
+            bottom: -5%;
+            right: -5%;
+        }
+
+        /* Sunburst effect */
+        .sunburst {
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            z-index: 2;
+            opacity: 0.6;
+        }
+
+        .sunburst::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: repeating-conic-gradient(
+                from 0deg,
+                transparent 0deg 4deg,
+                rgba(200, 245, 66, 0.15) 4deg 5deg
+            );
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+        }
+
+        /* Main content */
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .headline {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: clamp(1.8rem, 5vw, 3.5rem);
+            font-weight: 700;
+            color: var(--dark);
+            line-height: 1.15;
+            margin-bottom: 2.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .headline span {
+            display: block;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: var(--lime);
+            color: var(--dark);
+            text-decoration: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 500;
+            border-radius: 100px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(200, 245, 66, 0.4);
+            border: 2px solid transparent;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 30px rgba(200, 245, 66, 0.6);
+            background: var(--dark);
+            color: var(--lime);
+            border-color: var(--lime);
+        }
+
+        .subtext {
+            margin-top: 1.5rem;
+            font-size: 0.95rem;
+            color: #666;
+            font-weight: 400;
+        }
+
+        /* Decorative sparkles */
+        .sparkle {
+            position: absolute;
+            z-index: 3;
+            font-size: 18px;
+            color: var(--dark);
+        }
+
+        .sparkle:nth-child(1) { top: 15%; left: 10%; }
+        .sparkle:nth-child(2) { top: 25%; right: 15%; }
+        .sparkle:nth-child(3) { bottom: 20%; left: 20%; }
+        .sparkle:nth-child(4) { bottom: 30%; right: 10%; }
+        .sparkle:nth-child(5) { top: 50%; left: 5%; }
+        .sparkle:nth-child(6) { top: 60%; right: 8%; }
+
+        /* Grid lines (subtle) */
+        .grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+            background-size: 80px 80px;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .bg-text {
+                font-size: 100px;
+            }
+
+            .bg-text.top {
+                top: -2%;
+                left: -2%;
+            }
+
+            .bg-text.bottom {
+                bottom: -2%;
+                right: -2%;
+            }
+
+            .sunburst {
+                width: 280px;
+                height: 280px;
+            }
+
+            .headline {
+                font-size: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .cta-button {
+                padding: 0.85rem 2rem;
+                font-size: 1rem;
+            }
+
+            .subtext {
+                font-size: 0.85rem;
+                margin-top: 1.2rem;
+                padding: 0 1rem;
+            }
+
+            .content {
+                padding: 1.5rem;
+            }
+
+            .sparkle {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .bg-text {
+                font-size: 65px;
+            }
+
+            .bg-text.top {
+                top: 3%;
+                left: -3%;
+            }
+
+            .bg-text.bottom {
+                bottom: 3%;
+                right: -3%;
+            }
+
+            .sunburst {
+                width: 220px;
+                height: 220px;
+            }
+
+            .headline {
+                font-size: 1.3rem;
+            }
+
+            .sparkle {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Grid overlay -->
+    <div class="grid-overlay"></div>
+
+    <!-- Decorative sparkles -->
+    <div class="sparkle">✦</div>
+    <div class="sparkle">✦</div>
+    <div class="sparkle">✦</div>
+    <div class="sparkle">✦</div>
+    <div class="sparkle">✦</div>
+    <div class="sparkle">✦</div>
+
+    <!-- Background text -->
+    <div class="bg-text top">timemachine</div>
+    <div class="bg-text bottom">chat</div>
+
+    <!-- Sunburst -->
+    <div class="sunburst"></div>
+
+    <!-- Main content -->
+    <div class="content">
+        <h1 class="headline">
+            <span>We're officially at production</span>
+            <span>for TimeMachine Chat</span>
+        </h1>
+        <a href="https://timemachinechat.com" class="cta-button">timemachinechat.com</a>
+        <p class="subtext">Visit our production URL and experience the future.</p>
+    </div>
+</body>
 </html>
